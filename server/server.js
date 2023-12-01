@@ -8,6 +8,9 @@ app.use(cors({
   origin: '*',
 }));
 
+app.get('/news_recommendation/:user_id', routes.newsRecommendation);
+app.get('/net_worth/:user_id', routes.netWorth);
+
 
 app.listen(config.server_port, () => {
   console.log(`Server running at http://${config.server_host}:${config.server_port}/`)

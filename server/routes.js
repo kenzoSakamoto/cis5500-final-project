@@ -12,7 +12,99 @@ const connection = mysql.createConnection({
 });
 connection.connect((err) => err && console.log(err));
 
-// Route 13: GET /news_recommendation/:user_id
+// Route 10: GET /market_share/:ticker
+const balanceSheet = async function(req, res) {
+
+  connection.query(`
+  SELECT
+    Year,
+    Quarter,
+    SUM(CASE WHEN Indicator = 'Assets' THEN Amount ELSE 0 END) AS TotalAssets,
+    SUM(CASE WHEN Indicator = 'Cash and Cash Equivalents, at Carrying Value' THEN Amount ELSE 0 END) AS CashAndCashEquivalents,
+    SUM(CASE WHEN Indicator = 'Total Liabilities and Equity' THEN Amount ELSE 0 END) AS TotalLiabilitiesAndEquity,
+    SUM(CASE WHEN Indicator = 'Total Equity' THEN Amount ELSE 0 END) AS TotalEquity
+  FROM Stocks
+  WHERE Ticker = '${req.params.ticker}'
+  GROUP BY Year, Quarter;
+  `,
+  (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  });
+}
+
+// Route 11: GET /market_share/:ticker
+const marketShare = async function(req, res) {
+
+  connection.query(`
+  WITH IndustryRevenue AS (
+      SELECT s.Industry, SUM(sf.Amount) AS TotalIndustryRevenue
+      FROM Stocks sf
+      JOIN StockInfo s ON sf.Ticker = s.Ticker
+      WHERE sf.Indicator = 'Final Revenue'
+      GROUP BY s.Industry
+  ),
+  CompanyRevenue AS (
+      SELECT s.Industry, sf.Ticker, SUM(sf.Amount) AS CompanyRevenue
+      FROM Stocks sf
+      JOIN StockInfo s ON sf.Ticker = s.Ticker
+      WHERE sf.Indicator = 'Final Revenue'
+      GROUP BY s.Industry, sf.Ticker
+  )
+  SELECT
+      ir.Industry,
+      cr.Ticker,
+      (cr.CompanyRevenue / ir.TotalIndustryRevenue) * 100 AS MarketSharePercentage
+  FROM CompanyRevenue cr
+  JOIN IndustryRevenue ir ON cr.Industry = ir.Industry
+  WHERE cr.Ticker = '${req.params.ticker}'
+  `,
+  (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data[0]);
+    }
+  });
+}
+
+// Route 12: GET /user_worth/:user_id
+const userWorth = async function(req, res) {
+  connection.query(`
+  WITH CurrentlyOwned AS (
+    SELECT UserID, Ticker, SUM(IF(Type = 'BUY', Quantity, -Quantity)) AS NetQuantity
+    FROM Transactions
+    WHERE UserID = ${req.params.user_id}
+    GROUP BY UserID, Ticker
+    HAVING NetQuantity > 0
+  )
+  SELECT u.first_name, u.last_name, SUM(co.NetQuantity * sp.Close) AS worth
+  FROM Users AS u
+  JOIN CurrentlyOwned co ON u.id = co.UserID
+  JOIN (
+    SELECT Ticker, MAX(Date) AS MaxDate
+    FROM SecurityPrices
+    GROUP BY Ticker
+  ) max_date ON co.Ticker = max_date.Ticker
+  JOIN SecurityPrices sp ON co.Ticker = sp.Ticker AND max_date.MaxDate = sp.Date
+  GROUP BY u.first_name, u.id, u.last_name;
+  `,
+  (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data[0]);
+    }
+  });
+}
+
+// Route 13: GET /news_recommendation/:ticker
 const newsRecommendation = async function(req, res) {
   const industry_limit = req.query.industry_limit ? req.query.industry_limit : 5;
   const limit = req.query.limit ? req.query.limit : 20;
@@ -152,6 +244,9 @@ const netWorth = async function(req, res) {
 }
 
 module.exports = {
+  balanceSheet,
+  marketShare,
+  userWorth,
   newsRecommendation,
   netWorth
 }

@@ -8,6 +8,9 @@ app.use(cors({
   origin: '*',
 }));
 
+app.get('/balance_sheet/:ticker', routes.balanceSheet);
+app.get('/market_share/:ticker', routes.marketShare);
+app.get('/user_worth/:user_id', routes.userWorth);
 app.get('/news_recommendation/:user_id', routes.newsRecommendation);
 app.get('/net_worth/:user_id', routes.netWorth);
 

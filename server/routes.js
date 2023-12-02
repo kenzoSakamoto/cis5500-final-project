@@ -12,6 +12,186 @@ const connection = mysql.createConnection({
 });
 connection.connect((err) => err && console.log(err));
 
+
+// Route 5: GET /most_valued_companies
+const most_valued_companies = async function(req, res) {
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 10;
+
+  if (!page) {
+    connection.query(`
+      SELECT name, market_cap
+      FROM StockInfo
+      ORDER BY market_cap DESC
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json([]);
+      } else {
+        res.json(data);
+      }
+    });
+  } else {
+    const offset = pageSize * (page-1);
+
+    connection.query(`
+      SELECT name, market_cap
+      FROM StockInfo
+      ORDER BY market_cap DESC
+      LIMIT ${pageSize}
+      OFFSET ${offset}
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json([]);
+      } else {
+        res.json(data);
+      }
+    });
+  }
+}
+
+// Route 6: GET /correlation
+const correlation = async function(req, res) {
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 10;
+
+  if (!page) {
+    connection.query(`
+    WITH StockReturns AS (
+      SELECT
+      SP1.Ticker AS Ticker1,
+      SP2.Ticker AS Ticker2,
+      CORR(SP1.Close, SP2.Close) AS CorrelationCoefficient
+      FROM
+      SecurityPrices SP1
+      INNER JOIN SecurityPrices SP2 ON SP1.Ticker < SP2.Ticker
+      WHERE
+      SP1.Ticker <> SP2.Ticker
+      GROUP BY
+      SP1.Ticker, SP2.Ticker
+    )
+    SELECT
+      S1.Name AS Stock1_Name,
+      S2.Name AS Stock2_Name,
+      SR.CorrelationCoefficient
+    FROM
+    StockReturns SR
+    INNER JOIN Securities S1 ON SR.Ticker1 = S1.Ticker
+    INNER JOIN Securities S2 ON SR.Ticker2 = S2.Ticker
+    ORDER BY
+    SR.CorrelationCoefficient DESC
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json([]);
+      } else {
+        res.json(data);
+      }
+    });
+  } else {
+    const offset = pageSize * (page-1);
+
+    connection.query(`
+    WITH StockReturns AS (
+      SELECT
+      SP1.Ticker AS Ticker1,
+      SP2.Ticker AS Ticker2,
+      CORR(SP1.Close, SP2.Close) AS CorrelationCoefficient
+      FROM
+      SecurityPrices SP1
+      INNER JOIN SecurityPrices SP2 ON SP1.Ticker < SP2.Ticker
+      WHERE
+      SP1.Ticker <> SP2.Ticker
+      GROUP BY
+      SP1.Ticker, SP2.Ticker
+    )
+    SELECT
+      S1.Name AS Stock1_Name,
+      S2.Name AS Stock2_Name,
+      SR.CorrelationCoefficient
+    FROM
+    StockReturns SR
+    INNER JOIN Securities S1 ON SR.Ticker1 = S1.Ticker
+    INNER JOIN Securities S2 ON SR.Ticker2 = S2.Ticker
+    ORDER BY
+    SR.CorrelationCoefficient DESC
+    LIMIT ${pageSize}
+    OFFSET ${offset}
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json([]);
+      } else {
+        res.json(data);
+      }
+    });
+  }
+}
+
+
+// Route 7: GET /price_trend/:ticker
+const price_trend = async function(req, res) {
+  connection.query(`
+    SELECT date, close
+    FROM SecurityPrices
+    WHERE ticker = '${req.params.ticker}'
+    AND date >= '${req.query.start_date}'
+    AND date <= '${req.query.end_date}'
+    ORDER BY date ASC
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  });
+}
+
+// Route 8: GET /stock_news/:ticker
+const stock_news = async function(req, res) {
+  connection.query(`
+    SELECT Headline, Date
+    FROM FinancialNews
+    WHERE Ticker = '${req.params.ticker}'
+    ORDER BY Date DESC
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  });
+}
+
+// Route 9: GET /profit_and_loss_statement/:ticker
+const profit_and_loss_statement = async function(req, res) {
+  connection.query(`
+    SELECT
+    year,
+    quarter,
+    SUM(CASE WHEN indicator = 'Final Revenue' THEN amount ELSE 0 END) AS Revenue,
+    SUM(CASE WHEN indicator = 'Gross Profit' THEN amount ELSE 0 END) AS GrossProfit,
+    SUM(CASE WHEN indicator = 'Operating Income (Loss)' THEN Amount ELSE 0 END) AS
+    OperatingIncome,
+    SUM(CASE WHEN indicator = 'Net Income (Loss)' THEN Amount ELSE 0 END) AS NetIncome
+    FROM Stocks
+    WHERE ticker = '${req.params.ticker}'
+    AND year = '${req.query.year}'
+    AND quarter = '${req.query.quarter}'
+    GROUP BY year, quarter;
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data[0]);
+    }
+  });
+}
+
 // Route 10: GET /market_share/:ticker
 const balanceSheet = async function(req, res) {
 
@@ -244,6 +424,11 @@ const netWorth = async function(req, res) {
 }
 
 module.exports = {
+  profit_and_loss_statement,
+  stock_news,
+  price_trend,
+  correlation,
+  most_valued_companies,
   balanceSheet,
   marketShare,
   userWorth,

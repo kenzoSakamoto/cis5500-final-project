@@ -82,8 +82,8 @@ const tradedstock = async function(req, res) {
   SELECT sp.Ticker, s.Name, SUM(sp.Volume) AS TotalVolume
   FROM SecurityPrices sp
   JOIN Securities s ON sp.Ticker = s.Ticker
-  WHERE date BETWEEN ${start_date} AND ${end_date}
-  GROUP BY sp.Ticker, s.Name and s.ETF = ${etf}
+  WHERE date BETWEEN '${start_date}' AND '${end_date}'
+  GROUP BY sp.Ticker, s.Name and s.ETF = '${etf}'
   ORDER BY TotalVolume DESC
   LIMIT 10;
   `, (err, data) => {
@@ -98,7 +98,7 @@ const tradedstock = async function(req, res) {
 }
 
 // Route 4: GET /volatilestock
-const volatilestock = async function(req, req) {
+const volatilestock = async function(req, res) {
   const start_date = req.query.start_date;
   const end_date = req.query.end_date;
   const etf = req.query.etf ?? 'Yes'
@@ -106,12 +106,12 @@ const volatilestock = async function(req, req) {
   WITH DailyVolatility AS (
     SELECT sp.Ticker,DATE(sp.Date) AS Date,(sp.High - sp.Low) AS DailyRange
     FROM SecurityPrices sp
-    WHERE sp.Date BETWEEN ${start_date} AND ${end_date}
+    WHERE sp.Date BETWEEN '${start_date}' AND '${end_date}'
   )
   SELECT dv.Ticker,s.Name,STDDEV(dv.DailyRange) AS Volatility
   FROM DailyVolatility dv
   JOIN Securities s ON dv.Ticker = s.Ticker
-  WHERE s.ETF = ${etf}
+  WHERE s.ETF = '${etf}'
   GROUP BY dv.Ticker, s.Name
   ORDER BY Volatility DESC
   LIMIT 25

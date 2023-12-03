@@ -172,27 +172,36 @@ const correlation = async function(req, res) {
     connection.query(`
     WITH StockReturns AS (
       SELECT
-      SP1.Ticker AS Ticker1,
-      SP2.Ticker AS Ticker2,
-      CORR(SP1.Close, SP2.Close) AS CorrelationCoefficient
-      FROM
-      SecurityPrices SP1
-      INNER JOIN SecurityPrices SP2 ON SP1.Ticker < SP2.Ticker
-      WHERE
-      SP1.Ticker <> SP2.Ticker
-      GROUP BY
-      SP1.Ticker, SP2.Ticker
+          SP1.Ticker AS Ticker1,
+          SP2.Ticker AS Ticker2,
+          AVG(SP1.Close) AS AvgClose1,
+          AVG(SP2.Close) AS AvgClose2,
+          STDDEV(SP1.Close) AS StdDev1,
+          STDDEV(SP2.Close) AS StdDev2,
+          COUNT(*) AS N
+      FROM SecurityPrices SP1
+      JOIN SecurityPrices SP2 ON SP1.Date = SP2.Date AND SP1.Ticker < SP2.Ticker
+      WHERE SP1.Ticker <> SP2.Ticker
+      GROUP BY SP1.Ticker, SP2.Ticker
+    ),
+    CorrelationCalc AS (
+      SELECT
+          SR.Ticker1,
+          SR.Ticker2,
+          SUM((SP1.Close - SR.AvgClose1) * (SP2.Close - SR.AvgClose2)) / ((N - 1) * SR.StdDev1 * SR.StdDev2) AS CorrelationCoefficient
+      FROM StockReturns SR
+      JOIN SecurityPrices SP1 ON SR.Ticker1 = SP1.Ticker
+      JOIN SecurityPrices SP2 ON SR.Ticker2 = SP2.Ticker AND SP1.Date = SP2.Date
+      GROUP BY SR.Ticker1, SR.Ticker2, SR.AvgClose1, SR.AvgClose2, SR.StdDev1, SR.StdDev2, N
     )
     SELECT
       S1.Name AS Stock1_Name,
       S2.Name AS Stock2_Name,
-      SR.CorrelationCoefficient
-    FROM
-    StockReturns SR
-    INNER JOIN Securities S1 ON SR.Ticker1 = S1.Ticker
-    INNER JOIN Securities S2 ON SR.Ticker2 = S2.Ticker
-    ORDER BY
-    SR.CorrelationCoefficient DESC
+      CC.CorrelationCoefficient
+    FROM CorrelationCalc CC
+    JOIN Securities S1 ON CC.Ticker1 = S1.Ticker
+    JOIN Securities S2 ON CC.Ticker2 = S2.Ticker
+    ORDER BY CC.CorrelationCoefficient DESC
     `, (err, data) => {
       if (err || data.length === 0) {
         console.log(err);
@@ -207,27 +216,36 @@ const correlation = async function(req, res) {
     connection.query(`
     WITH StockReturns AS (
       SELECT
-      SP1.Ticker AS Ticker1,
-      SP2.Ticker AS Ticker2,
-      CORR(SP1.Close, SP2.Close) AS CorrelationCoefficient
-      FROM
-      SecurityPrices SP1
-      INNER JOIN SecurityPrices SP2 ON SP1.Ticker < SP2.Ticker
-      WHERE
-      SP1.Ticker <> SP2.Ticker
-      GROUP BY
-      SP1.Ticker, SP2.Ticker
+          SP1.Ticker AS Ticker1,
+          SP2.Ticker AS Ticker2,
+          AVG(SP1.Close) AS AvgClose1,
+          AVG(SP2.Close) AS AvgClose2,
+          STDDEV(SP1.Close) AS StdDev1,
+          STDDEV(SP2.Close) AS StdDev2,
+          COUNT(*) AS N
+      FROM SecurityPrices SP1
+      JOIN SecurityPrices SP2 ON SP1.Date = SP2.Date AND SP1.Ticker < SP2.Ticker
+      WHERE SP1.Ticker <> SP2.Ticker
+      GROUP BY SP1.Ticker, SP2.Ticker
+    ),
+    CorrelationCalc AS (
+      SELECT
+          SR.Ticker1,
+          SR.Ticker2,
+          SUM((SP1.Close - SR.AvgClose1) * (SP2.Close - SR.AvgClose2)) / ((N - 1) * SR.StdDev1 * SR.StdDev2) AS CorrelationCoefficient
+      FROM StockReturns SR
+      JOIN SecurityPrices SP1 ON SR.Ticker1 = SP1.Ticker
+      JOIN SecurityPrices SP2 ON SR.Ticker2 = SP2.Ticker AND SP1.Date = SP2.Date
+      GROUP BY SR.Ticker1, SR.Ticker2, SR.AvgClose1, SR.AvgClose2, SR.StdDev1, SR.StdDev2, N
     )
     SELECT
       S1.Name AS Stock1_Name,
       S2.Name AS Stock2_Name,
-      SR.CorrelationCoefficient
-    FROM
-    StockReturns SR
-    INNER JOIN Securities S1 ON SR.Ticker1 = S1.Ticker
-    INNER JOIN Securities S2 ON SR.Ticker2 = S2.Ticker
-    ORDER BY
-    SR.CorrelationCoefficient DESC
+      CC.CorrelationCoefficient
+    FROM CorrelationCalc CC
+    JOIN Securities S1 ON CC.Ticker1 = S1.Ticker
+    JOIN Securities S2 ON CC.Ticker2 = S2.Ticker
+    ORDER BY CC.CorrelationCoefficient DESC
     LIMIT ${pageSize}
     OFFSET ${offset}
     `, (err, data) => {

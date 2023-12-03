@@ -18,21 +18,19 @@ connection.connect((err) => err && console.log(err));
 // Route 1: GET /signin
 const signin = async function(req, res) {
   const username = req.query.username;
-  const password = req.query.username;
+  const password = req.query.password;
 
   connection.query(`
-    SELECT ID, FirstName, LastName, Balance
-    FROM User
-    WHERE Email = ${username} AND Password = ${password}`,
+    SELECT id, first_name, last_name, balance
+    FROM Users
+    WHERE email = '${username}' AND password = '${password}'`,
     (err, data) => {
         if (err || data.length == 0) {
           console.log("error");
+          res.json({});
         } else {
           console.log("redirect");
-          res.json({
-            username: data[0].email,
-            password: data[0].password
-          });
+          res.json(data[0]);
         }
     }
   );
@@ -42,30 +40,32 @@ const signin = async function(req, res) {
 const topstock = async function(req, res) {
   const start_date = req.query.start_date;
   const end_date = req.query.end_date;
-  const etf = req.query.etf ?? 'Yes'
+  const etf = req.query.etf ?? 0
   connection.query(`
     WITH StartPrices AS (
       SELECT sp.Ticker, sp.Close AS StartClose
       FROM SecurityPrices sp
       JOIN Securities s ON sp.Ticker = s.Ticker
-      WHERE s.ETF = ${etf} AND sp.Date = ${start_date}
+      WHERE s.ETF = '${etf}' AND sp.Date = '${start_date}'
     ),
     EndPrices AS (
     SELECT sp.Ticker, sp.Close AS EndClose
     FROM SecurityPrices sp
     JOIN Securities s ON sp.Ticker = s.Ticker
-    WHERE s.ETF = ${etf} AND sp.Date = ${end_date}
+    WHERE s.ETF = '${etf}' AND sp.Date = '${end_date}'
     )
     SELECT st.Ticker, st.Name, ((ep.EndClose - sp.StartClose) / sp.StartClose) * 100 AS Appreciation
     FROM StartPrices sp
     JOIN EndPrices ep ON sp.Ticker = ep.Ticker
-    JOIN Stocks st ON sp.Ticker = st.Ticker
+    JOIN StockInfo st ON sp.Ticker = st.Ticker
     ORDER BY Appreciation DESC
     LIMIT 25
-`,
+    `,
     (err, data) => {
         if (err || data.length == 0) {
           console.log("error");
+          console.log(err)
+          res.json({});
         } else {
           res.json({data})
         }
@@ -89,6 +89,7 @@ const tradedstock = async function(req, res) {
   `, (err, data) => {
     if (err || data.length == 0) {
       console.log("error");
+      res.json({});
     } else {
       res.json(data)
     }
@@ -117,6 +118,7 @@ const volatilestock = async function(req, req) {
   `, (err, data) => {
     if (err || data.length == 0) {
       console.log("error");
+      res.json({});
     } else {
       res.json(data)
     }

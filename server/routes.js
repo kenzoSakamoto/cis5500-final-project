@@ -167,10 +167,24 @@ const most_valued_companies = async function(req, res) {
 const correlation = async function(req, res) {
   const page = req.query.page;
   const pageSize = req.query.page_size ?? 10;
+  const limit = 20;
 
   if (!page) {
     connection.query(`
-    WITH StockReturns AS (
+    WITH MostValued AS (
+        SELECT ticker
+        FROM StockInfo
+        ORDER BY market_cap DESC
+        LIMIT ${limit}
+    ),
+    StockPrices AS (
+        SELECT MostValued.ticker, date, close
+        FROM MostValued
+        JOIN SecurityPrices ON MostValued.ticker = SecurityPrices.ticker
+        JOIN stocks.Securities S on S.ticker = SecurityPrices.ticker
+        WHERE etf = 0
+    ),
+    StockReturns AS (
       SELECT
           SP1.Ticker AS Ticker1,
           SP2.Ticker AS Ticker2,
@@ -179,8 +193,8 @@ const correlation = async function(req, res) {
           STDDEV(SP1.Close) AS StdDev1,
           STDDEV(SP2.Close) AS StdDev2,
           COUNT(*) AS N
-      FROM SecurityPrices SP1
-      JOIN SecurityPrices SP2 ON SP1.Date = SP2.Date AND SP1.Ticker < SP2.Ticker
+      FROM StockPrices SP1
+      JOIN StockPrices SP2 ON SP1.Date = SP2.Date AND SP1.Ticker < SP2.Ticker
       WHERE SP1.Ticker <> SP2.Ticker
       GROUP BY SP1.Ticker, SP2.Ticker
     ),
@@ -190,12 +204,14 @@ const correlation = async function(req, res) {
           SR.Ticker2,
           SUM((SP1.Close - SR.AvgClose1) * (SP2.Close - SR.AvgClose2)) / ((N - 1) * SR.StdDev1 * SR.StdDev2) AS CorrelationCoefficient
       FROM StockReturns SR
-      JOIN SecurityPrices SP1 ON SR.Ticker1 = SP1.Ticker
-      JOIN SecurityPrices SP2 ON SR.Ticker2 = SP2.Ticker AND SP1.Date = SP2.Date
+      JOIN StockPrices SP1 ON SR.Ticker1 = SP1.Ticker
+      JOIN StockPrices SP2 ON SR.Ticker2 = SP2.Ticker AND SP1.Date = SP2.Date
       GROUP BY SR.Ticker1, SR.Ticker2, SR.AvgClose1, SR.AvgClose2, SR.StdDev1, SR.StdDev2, N
     )
     SELECT
+      S1.ticker AS Stock1_Ticker,
       S1.Name AS Stock1_Name,
+      S2.ticker AS Stock2_Ticker,
       S2.Name AS Stock2_Name,
       CC.CorrelationCoefficient
     FROM CorrelationCalc CC
@@ -214,7 +230,20 @@ const correlation = async function(req, res) {
     const offset = pageSize * (page-1);
 
     connection.query(`
-    WITH StockReturns AS (
+    WITH MostValued AS (
+      SELECT ticker
+      FROM StockInfo
+      ORDER BY market_cap DESC
+      LIMIT ${limit}
+    ),
+    StockPrices AS (
+        SELECT MostValued.ticker, date, close
+        FROM MostValued
+        JOIN SecurityPrices ON MostValued.ticker = SecurityPrices.ticker
+        JOIN stocks.Securities S on S.ticker = SecurityPrices.ticker
+        WHERE etf = 0
+    ),
+    StockReturns AS (
       SELECT
           SP1.Ticker AS Ticker1,
           SP2.Ticker AS Ticker2,
@@ -223,8 +252,8 @@ const correlation = async function(req, res) {
           STDDEV(SP1.Close) AS StdDev1,
           STDDEV(SP2.Close) AS StdDev2,
           COUNT(*) AS N
-      FROM SecurityPrices SP1
-      JOIN SecurityPrices SP2 ON SP1.Date = SP2.Date AND SP1.Ticker < SP2.Ticker
+      FROM StockPrices SP1
+      JOIN StockPrices SP2 ON SP1.Date = SP2.Date AND SP1.Ticker < SP2.Ticker
       WHERE SP1.Ticker <> SP2.Ticker
       GROUP BY SP1.Ticker, SP2.Ticker
     ),
@@ -234,8 +263,8 @@ const correlation = async function(req, res) {
           SR.Ticker2,
           SUM((SP1.Close - SR.AvgClose1) * (SP2.Close - SR.AvgClose2)) / ((N - 1) * SR.StdDev1 * SR.StdDev2) AS CorrelationCoefficient
       FROM StockReturns SR
-      JOIN SecurityPrices SP1 ON SR.Ticker1 = SP1.Ticker
-      JOIN SecurityPrices SP2 ON SR.Ticker2 = SP2.Ticker AND SP1.Date = SP2.Date
+      JOIN StockPrices SP1 ON SR.Ticker1 = SP1.Ticker
+      JOIN StockPrices SP2 ON SR.Ticker2 = SP2.Ticker AND SP1.Date = SP2.Date
       GROUP BY SR.Ticker1, SR.Ticker2, SR.AvgClose1, SR.AvgClose2, SR.StdDev1, SR.StdDev2, N
     )
     SELECT
@@ -322,7 +351,7 @@ const profit_and_loss_statement = async function(req, res) {
   });
 }
 
-// Route 10: GET /market_share/:ticker
+// Route 10: GET /balance_sheet/:ticker
 const balanceSheet = async function(req, res) {
 
   connection.query(`

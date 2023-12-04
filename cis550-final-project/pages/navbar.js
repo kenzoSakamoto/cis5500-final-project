@@ -1,6 +1,7 @@
 import React from 'react';
 import { AppBar, Tabs, Tab } from '@mui/material';
 import { useRouter } from 'next/router';
+import styles from '../src/app/page.module.css'
 
 const NavBar = () => {
   const router = useRouter();

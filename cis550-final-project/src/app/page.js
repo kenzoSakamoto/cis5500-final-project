@@ -9,7 +9,8 @@ export default function Home() {
   const router = useRouter()
 
   const handleLogin = (e) => {
-    // Login Logic
+    // ToDo: Check for user validation before router pushing
+    router.push('/home')
   };
 
   const handleCreateAccount = () => {
@@ -41,9 +42,6 @@ export default function Home() {
           </Button>
         </form>
         <div>
-          <Link href="#" underline="always">
-            Forgot Password
-          </Link>
         </div>
       </div>
     </main>

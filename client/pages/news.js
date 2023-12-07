@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import NavBar from './navbar'
 import styles from '../src/app/page.module.css'
 
-export default function Home() {
+export default function News() {
     const [newsRecommendations, setNewsRecommendations] = useState([]);
     React.useEffect(() => {
         const fetchNewsRecommendations = async () => {

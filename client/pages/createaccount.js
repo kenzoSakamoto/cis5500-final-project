@@ -2,6 +2,7 @@ import React from 'react';
 import { TextField, Button } from '@mui/material';
 import styles from '../src/app/page.module.css'
 
+const config = require('../src/app/config.json');
 export default function CreateAccount() {
 
   const handleCreateAccount = (e) => {

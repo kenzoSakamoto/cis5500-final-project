@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import NavBar from './navbar'
 import styles from '../src/app/page.module.css'
 
+const config = require('../src/app/config.json');
 
 export default function Portfolio() {
   // State variables to hold data fetched from backend

@@ -14,7 +14,6 @@ export default function Home() {
 
 
     return (
-        <main className={styles.main}>
             <div>
                 <NavBar/>
             <h1>Welcome user!</h1>
@@ -43,6 +42,5 @@ export default function Home() {
         </Table>
       </TableContainer>
             </div>
-        </main>
         );
 }

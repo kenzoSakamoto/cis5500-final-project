@@ -14,6 +14,9 @@ const NavBar = () => {
       case 1:
         router.push('/portfolio');
         break;
+      case 2:
+        router.push('/stockoverview');
+        break;
       default:
         break;
     }
@@ -24,6 +27,7 @@ const NavBar = () => {
       <Tabs onChange={handleChange}>
         <Tab label="Home" />
         <Tab label="My Portfolio" />
+        <Tab label="Stock Overview"/>
       </Tabs>
     </AppBar>
   );

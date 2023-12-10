@@ -3,6 +3,9 @@ import { Tabs, Tab, TextField, Button, Box, Typography, TableContainer, Table, T
 import { useRouter } from 'next/router';
 import NavBar from './navbar'
 import styles from '../src/app/page.module.css'
+import axios from 'axios';
+
+const config = require('../src/app/config.json');
 
 export default function StockAnalysis() {
     const [tabIndex, setTabIndex] = useState(0); // State to manage active tab index
@@ -17,6 +20,7 @@ export default function StockAnalysis() {
     const [specificYear, setSpecificYear] = useState('');
     const [specificQuarter, setSpecificQuarter] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0); // State to manage selected index
+    const [data, setData] = useState([]);
 
 
     const handleTabChange = (event, newIndex) => {
@@ -24,6 +28,7 @@ export default function StockAnalysis() {
     };
 
     const handleStartDateChange = (event) => {
+        console.log(event.target.value)
         setStartDate(event.target.value);
     };
 
@@ -31,9 +36,42 @@ export default function StockAnalysis() {
         setEndDate(event.target.value);
     };
 
-    const handleTimeframeAnalysisSearch = () => {
-        // Perform search based on timeframe analysis inputs (startDate, endDate, ticker)
-        // Fetch data using these parameters
+    const handleTimeframeAnalysisSearch = async () => {
+        try {
+            let responseData;
+            switch (selectedIndex) {
+                case 0:
+                    // Fetch data for top performing stocks
+                    const topStockResponse = await axios.get(`http://${config.server_host}:${config.server_port}/topstock?start_date=${startDate}&end_date=${endDate}`);
+                    responseData = topStockResponse.data;
+                    break;
+                case 1:
+                    // Fetch data for most traded stocks
+                    const tradedStockResponse = await axios.get(`http://${config.server_host}:${config.server_port}/tradedstocks?start_date=${startDate}&end_date=${endDate}`);
+                    responseData = tradedStockResponse.data;
+                    break;
+                case 2:
+                    // Fetch data for most volatile stocks
+                    const volatileStockResponse = await axios.get(`http://${config.server_host}:${config.server_port}/volatilestocks?start_date=${startDate}&end_date=${endDate}`);
+                    responseData = volatileStockResponse.data;
+                    break;
+                case 3:
+                    const priceResponse = await axios.get(`http://${config.server_host}:${config.server_port}/price_trend?ticker=${ticker}&start_date=${startDate}&end_date=${endDate}`);
+                    responseData = priceResponse.data;
+                    break;
+                default:
+                    responseData = [];
+                    break;
+            }
+    
+            // Use responseData to populate the table
+            // Update state or renderResultsTable to display fetched data in the table
+            console.log(responseData)
+            setData(responseData)
+        } catch (error) {
+            // Handle error
+            console.error("Error fetching data:", error);
+        }
     };
 
     const handleRealtimeStatsSearch = () => {
@@ -41,9 +79,48 @@ export default function StockAnalysis() {
         // Fetch data using these parameters
     };
 
-    const handleSpecificStockSearch = () => {
-        // Perform search based on specific stock inputs (specificTicker, specificYear, specificQuarter)
-        // Fetch data using these parameters
+    const handleSpecificStockSearch = async () => {
+        try {
+            let responseData = [];
+            switch (selectedIndex) {
+                // Other cases handling
+    
+                case 1: // Stock News
+                    console.log(ticker)
+                    const stockNewsResponse = await axios.get(`http://${config.server_host}:${config.server_port}/stock_news?ticker=${specificTicker}`);
+                    responseData = stockNewsResponse.data;
+                    break;
+    
+                case 4: // Profit and Loss Statement
+                    const profitLossResponse = await axios.get(`http://${config.server_host}:${config.server_port}/profit_and_loss_statement?ticker=${specificTicker}&year=${specificYear}&quarter=${specificQuarter}`);
+                    responseData = profitLossResponse.data;
+                    break;
+    
+                case 0: // Balance Sheet
+                    
+                    const balanceSheetResponse = await axios.get(`http://${config.server_host}:${config.server_port}/balance_sheet/${specificTicker}`);
+                    responseData = balanceSheetResponse.data;
+                    break;
+    
+                case 3: // Market Share
+                    console.log("market share query")
+                    const marketShareResponse = await axios.get(`http://${config.server_host}:${config.server_port}/market_share/${specificTicker}`);
+                    responseData = marketShareResponse.data;
+                    console.log(responseData)
+                    break;
+    
+                default:
+                    break;
+            }
+            setData(responseData)
+            console.log(responseData)
+    
+            // Use responseData to populate the table
+            // Update state or renderResultsTable to display fetched data in the table
+        } catch (error) {
+            // Handle error
+            console.error("Error fetching data:", error);
+        }
     };
 
     const renderTabContent = (index) => {
@@ -96,40 +173,7 @@ export default function StockAnalysis() {
                     {/* Table to display results */}
                   </Box>
                 );
-            case 1: // Realtime Stats Tab
-                return (
-                    <Box>
-                        <TextField
-                            label="Page"
-                            type="number"
-                            value={page}
-                            onChange={(e) => setPage(e.target.value)}
-                            sx={{ mr: 1 }}
-                        />
-                        <TextField
-                            label="Page Size"
-                            type="number"
-                            value={pageSize}
-                            onChange={(e) => setPageSize(e.target.value)}
-                            sx={{ mr: 1 }}
-                        />
-                        <TextField
-                            label="Option"
-                            select
-                            value={tabIndex === 1 ? selectedIndex : ''}
-                            onChange={(e) => setSelectedIndex(e.target.value)}
-                            sx={{ mr: 1 }}
-                        >
-                            <MenuItem value={0}>Most Valued Companies</MenuItem>
-                            <MenuItem value={1}>Correlation</MenuItem>
-                        </TextField>
-                        <Button variant="contained" onClick={handleRealtimeStatsSearch} sx={{ mt: 1 }}>
-                            Search
-                        </Button>
-                        {/* Table to display results */}
-                    </Box>
-                );
-                case 2: // Specific Stock Tab
+                case 1: // Specific Stock Tab
                 return (
                     <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -170,7 +214,6 @@ export default function StockAnalysis() {
                         >
                         <MenuItem value={0}>Balance Sheet</MenuItem>
                         <MenuItem value={1}>Stock News</MenuItem>
-                        <MenuItem value={2}>Price Trend</MenuItem>
                         <MenuItem value={3}>Market Share</MenuItem>
                         <MenuItem value={4}>Profit and Loss Statement</MenuItem>
                         </TextField>
@@ -185,10 +228,43 @@ export default function StockAnalysis() {
                 return null;
         }
     };
-
+    const renderTableHeaders = () => {
+        if (!Array.isArray(data)) {
+            return null;
+        }
+    
+        const headers = Object.keys(data);
+    
+        return (
+            <TableHead>
+                <TableRow>
+                    {headers.map((header, index) => (
+                        <TableCell key={index}>{header}</TableCell>
+                    ))}
+                </TableRow>
+            </TableHead>
+        );
+    };
     const renderResultsTable = () => {
-        // Function to render table based on fetched data results
-        // Use fetched data to populate table rows
+        if (!Array.isArray(data)) {
+            // If data is a singular object, create a single table row
+            return (
+                <TableRow>
+                    {Object.values(data).map((cell, idx) => (
+                        <TableCell key={idx}>{cell}</TableCell>
+                    ))}
+                </TableRow>
+            );
+        }
+    
+        // If data is an array of objects, render each object as a table row
+        return data.map((row, index) => (
+            <TableRow key={index}>
+                {Object.values(row).map((cell, idx) => (
+                    <TableCell key={idx}>{cell}</TableCell>
+                ))}
+            </TableRow>
+        ));
     };
 
     return (
@@ -197,28 +273,19 @@ export default function StockAnalysis() {
             <Box>
                 <Tabs value={tabIndex} onChange={handleTabChange}>
                     <Tab label="Timeframe Analysis" />
-                    <Tab label="Realtime Stats" />
                     <Tab label="Specific Stock" />
                 </Tabs>
                 <Typography variant="h5" mb={2}>
                     {tabIndex === 0 && 'Timeframe Analysis Content'}
-                    {tabIndex === 1 && 'Realtime Stats Content'}
-                    {tabIndex === 2 && 'Specific Stock Content'}
+                    {tabIndex === 1 && 'Specific Stock Content'}
                 </Typography>
                 {renderTabContent(tabIndex)}
-                {/* Table to display search results */}
                 <TableContainer>
                     <Table>
-                        {/* Table header */}
-                        <TableHead>
-                            <TableRow>
-                                {/* Define table headers */}
-                                {/* Example: <TableCell>Column Header</TableCell> */}
-                            </TableRow>
-                        </TableHead>
-                        {/* Table body */}
+                        {/* Render table headers based on fetched data */}
+                        {renderTableHeaders()}
+                        {/* Render table rows based on fetched data */}
                         <TableBody>
-                            {/* Render table rows based on fetched data */}
                             {renderResultsTable()}
                         </TableBody>
                     </Table>

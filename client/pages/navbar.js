@@ -9,10 +9,10 @@ const NavBar = () => {
   const handleChange = (event, newValue) => {
     switch (newValue) {
       case 0:
-        router.push('/portfolio');
+        router.push('/home2');
         break;
       case 1:
-        router.push('/news');
+        router.push('/login');
         break;
       case 2:
         router.push('/stockoverview');
@@ -25,8 +25,8 @@ const NavBar = () => {
   return (
     <AppBar position="static">
       <Tabs onChange={handleChange}>
-        <Tab label="My Portfolio" />
-        <Tab label="News" />
+        <Tab label="Home" />
+        <Tab label="My Portfolio/News" />
         <Tab label="Stock Overview"/>
       </Tabs>
     </AppBar>

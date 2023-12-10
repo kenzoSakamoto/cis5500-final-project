@@ -3,19 +3,64 @@ import { AppBar, Tabs, Tab, Table, TableContainer, TableHead, TableBody, TableRo
 import { useRouter } from 'next/router';
 import NavBar from './navbar'
 import styles from '../src/app/page.module.css'
+import axios from 'axios';
+import { Line } from 'react-chartjs-2';
 
 const config = require('../src/app/config.json');
 
 export default function Portfolio() {
   // State variables to hold data fetched from backend
+  const data = "";
+  const router = useRouter();
   const [portfolioValue, setPortfolioValue] = useState([]);
   const [netWorthOverTime, setNetWorthOverTime] = useState([]);
   const [ownedStocks, setOwnedStocks] = useState([]);
   const [ownedETFs, setOwnedETFs] = useState([]);
+  const [newsRecommendations, setNewsRecommendations] = useState([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [userData, setUserData] = useState({})
+  const [worth, setWorth] = useState({})
+  const [dates, setDates] = useState([])
+  const [worthOverTime, setWorthOverTime] = useState([])
 
+  useEffect(() => {
+    const fetchData = async () => {
+      // Fetch portfolio data and update state
+      // const portfolioData = await fetchPortfolioData(userData.id);
+      // setPortfolioValue(portfolioData);
 
+      // Fetch net worth over time data and update state
+      // const netWorthData = await fetchNetWorthOverTime(userData.id);
+      // setNetWorthOverTime(netWorthData);
+
+      // Fetch owned stocks data and update state
+      // const ownedStocksData = await fetchOwnedStocks(userData.id);
+      // setOwnedStocks(ownedStocksData);
+
+      // Fetch owned ETFs data and update state
+      // const ownedETFsData = await fetchOwnedETFs(userData.id);
+      // setOwnedETFs(ownedETFsData);
+
+      // Fetch news recommendations data based on user ID and update state
+      const worth = await axios.get(`http://${config.server_host}:${config.server_port}/user_worth/${userData.id}`);
+      const newsData = await axios.get(`http://${config.server_host}:${config.server_port}/news_recommendation/${userData.id}?limit=20&industry_limit=5`);
+      const netWorthResponse = await axios.get(`http://${config.server_host}:${config.server_port}/net_worth/${userData.id}`);
+      
+      console.log(netWorthResponse.data)
+      setNewsRecommendations(newsData.data);
+      setWorth(worth.data)
+    
+      // setNetWorthOverTime(netWorthResponse.data);
+     console.log(dates);
+    };
+
+    if (Object.keys(userData).length > 0) {
+      fetchData();
+    }
+  }, [userData]);
+
+  
   React.useEffect(() => {
-
     const fetchPortfolioValue = async () => {
       // Fetch data and update state
       // const data = await fetchPortfolioValueFromAPI();
@@ -48,6 +93,29 @@ export default function Portfolio() {
     fetchOwnedETFs();
   }, []);
 
+  const dataTable = {
+    labels: dates,
+    datasets: [
+      {
+        label: 'Net Worth Over Time',
+        data: worthOverTime,
+        fill: false,
+        borderColor: 'rgb(75, 192, 192)',
+        tension: 0.1,
+      },
+    ],
+  };
+
+  useEffect(() => {
+    const { data } = router.query;
+
+    if (data) {
+      const userData = JSON.parse(data);
+      setUserData(userData)
+      // Now 'userData' contains the JSON object passed from the login page
+      // Use 'userData' to set your state variables or perform actions with the passed data
+    }
+  }, [router.query]);
   return (
     <div>
       <NavBar />
@@ -58,52 +126,48 @@ export default function Portfolio() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>First Name</TableCell>
-              <TableCell>Last Name</TableCell>
-              <TableCell>Worth</TableCell>
+              <TableCell><b>First Name</b></TableCell>
+              <TableCell><b>Last Name</b></TableCell>
+              <TableCell><b>Worth</b></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {/* Replace */}
-            {portfolioValue.map((item, index) => (
-              <TableRow key={index}>
-                <TableCell>{item.first_name}</TableCell>
-                <TableCell>{item.last_name}</TableCell>
-                <TableCell>{item.worth}</TableCell>
+              <TableRow>
+                <TableCell>{userData.first_name}</TableCell>
+                <TableCell>{userData.last_name}</TableCell>
+                <TableCell>{worth.worth}</TableCell>
               </TableRow>
-            ))}
           </TableBody>
         </Table>
       </TableContainer>
 
       <h2>Net Worth Over Time</h2>
-      {/* Display net worth over time data */}
       <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Date</TableCell>
-              <TableCell>Net Worth</TableCell>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Date</TableCell>
+            <TableCell>Net Worth</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {netWorthOverTime.map((item, index) => (
+            <TableRow key={index}>
+              <TableCell>{item.date}</TableCell>
+              <TableCell>{item.NetWorth}</TableCell>
             </TableRow>
-          </TableHead>
-          <TableBody>
-            {netWorthOverTime.map((item, index) => (
-              <TableRow key={index}>
-                <TableCell>{item.date}</TableCell>
-                <TableCell>{item.NetWorth}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
 
       <h2>Owned Stocks</h2>
       <TableContainer>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Stock Symbol</TableCell>
-              <TableCell>Quantity</TableCell>
+              <TableCell><b>Stock Symbol</b></TableCell>
+              <TableCell><b>Quantity</b></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -133,6 +197,31 @@ export default function Portfolio() {
               <TableRow key={index}>
                 <TableCell>{item.symbol}</TableCell>
                 <TableCell>{item.quantity}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      
+      <h2>News Recommendations</h2>
+       {/* Display news recommendations data */}
+       <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Date</TableCell>
+              <TableCell>Headline</TableCell>
+              <TableCell>Ticker</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {/* Map over newsRecommendations data and display */}
+            {/* Replace this with the actual data */}
+            {newsRecommendations.map((item, index) => (
+              <TableRow key={index}>
+                <TableCell>{item.date}</TableCell>
+                <TableCell>{item.Headline}</TableCell>
+                <TableCell>{item.ticker}</TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -1,20 +1,21 @@
-'use client'
 import Image from 'next/image'
-import styles from './page.module.css'
+import styles from '../src/app/page.module.css'
 import {ReactComponentElement, useState} from 'react';
 import { TextField, Button, Link } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
-const config = require('./config.json');
-export default function Home() {
+
+const config = require('../src/app/config.json');
+export default function Login() {
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = async (e) => {
+    console.log("test")
     e.preventDefault();
-
+    console.log("test2")
     try {
       const response = await axios.get(`http://${config.server_host}:${config.server_port}/signin`, {
         params: {
@@ -22,13 +23,16 @@ export default function Home() {
           password: password,
         },
       });
-
+      
       const userData = response.data;
       console.log(userData);
 
       if (Object.keys(userData).length > 0) {
         // User authenticated successfully, redirect to home page or user dashboard
-        router.push('/home2');
+        router.push({
+            pathname: '/portfolio',
+            query: { data: JSON.stringify(userData) }, // Include userData in the query parameter
+          });
       } else {
         // Handle authentication failure (e.g., show error message)
         console.log('Authentication failed');
@@ -43,7 +47,6 @@ export default function Home() {
     router.push('/createaccount');
   };
 
-  router.push('/home2')
   return (
     <main className={styles.main}>
       <div>
@@ -64,7 +67,7 @@ export default function Home() {
             // ... (other input props)
           />
           <br />
-          <Button type="submit" variant="contained" color="primary">
+          <Button onClick={handleLogin}type="submit" variant="contained" color="primary">
             Login
           </Button>
           <Button onClick={handleCreateAccount} variant="contained" color="secondary">

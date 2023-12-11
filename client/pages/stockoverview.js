@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import NavBar from './navbar'
 import styles from '../src/app/page.module.css'
 import axios from 'axios';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const config = require('../src/app/config.json');
 
@@ -43,20 +44,22 @@ export default function StockAnalysis() {
                 case 0:
                     // Fetch data for top performing stocks
                     const topStockResponse = await axios.get(`http://${config.server_host}:${config.server_port}/topstock?start_date=${startDate}&end_date=${endDate}`);
-                    responseData = topStockResponse.data;
+                    responseData = topStockResponse.data.data;
+                    console.log(startDate)
+                    console.log(' top stock data: ' + responseData)
                     break;
                 case 1:
                     // Fetch data for most traded stocks
-                    const tradedStockResponse = await axios.get(`http://${config.server_host}:${config.server_port}/tradedstocks?start_date=${startDate}&end_date=${endDate}`);
+                    const tradedStockResponse = await axios.get(`http://${config.server_host}:${config.server_port}/tradedstock?start_date=${startDate}&end_date=${endDate}`);
                     responseData = tradedStockResponse.data;
                     break;
                 case 2:
                     // Fetch data for most volatile stocks
-                    const volatileStockResponse = await axios.get(`http://${config.server_host}:${config.server_port}/volatilestocks?start_date=${startDate}&end_date=${endDate}`);
+                    const volatileStockResponse = await axios.get(`http://${config.server_host}:${config.server_port}/volatilestock?start_date=${startDate}&end_date=${endDate}`);
                     responseData = volatileStockResponse.data;
                     break;
                 case 3:
-                    const priceResponse = await axios.get(`http://${config.server_host}:${config.server_port}/price_trend?ticker=${ticker}&start_date=${startDate}&end_date=${endDate}`);
+                    const priceResponse = await axios.get(`http://${config.server_host}:${config.server_port}/price_trend/${ticker}?start_date=${startDate}&end_date=${endDate}`);
                     responseData = priceResponse.data;
                     break;
                 default:
@@ -74,11 +77,6 @@ export default function StockAnalysis() {
         }
     };
 
-    const handleRealtimeStatsSearch = () => {
-        // Perform search based on realtime stats inputs (page, pageSize)
-        // Fetch data using these parameters
-    };
-
     const handleSpecificStockSearch = async () => {
         try {
             let responseData = [];
@@ -92,12 +90,12 @@ export default function StockAnalysis() {
                     break;
     
                 case 4: // Profit and Loss Statement
+                    console.log("quarter: " + specificQuarter)
                     const profitLossResponse = await axios.get(`http://${config.server_host}:${config.server_port}/profit_and_loss_statement?ticker=${specificTicker}&year=${specificYear}&quarter=${specificQuarter}`);
                     responseData = profitLossResponse.data;
                     break;
     
                 case 0: // Balance Sheet
-                    
                     const balanceSheetResponse = await axios.get(`http://${config.server_host}:${config.server_port}/balance_sheet/${specificTicker}`);
                     responseData = balanceSheetResponse.data;
                     break;
@@ -198,10 +196,10 @@ export default function StockAnalysis() {
                             onChange={(e) => setSpecificQuarter(e.target.value)}
                             sx={{ mr: 1 }}
                             >
-                            <MenuItem value="q1">Q1</MenuItem>
-                            <MenuItem value="q2">Q2</MenuItem>
-                            <MenuItem value="q3">Q3</MenuItem>
-                            <MenuItem value="q4">Q4</MenuItem>
+                            <MenuItem value="Q1">Q1</MenuItem>
+                            <MenuItem value="Q2">Q2</MenuItem>
+                            <MenuItem value="Q3">Q3</MenuItem>
+                            <MenuItem value="Q4">Q4</MenuItem>
                             </TextField>
                         </>
                         )}
@@ -229,22 +227,30 @@ export default function StockAnalysis() {
         }
     };
     const renderTableHeaders = () => {
+        let headers = null;
+      
         if (!Array.isArray(data)) {
-            return null;
+          headers = data ? Object.keys(data) : null;
+        } else {
+          if (data && data.length > 0) {
+            headers = Object.keys(data[0]);
+          }
         }
-    
-        const headers = Object.keys(data);
-    
-        return (
+      
+        if (headers && headers !== undefined) {
+          return (
             <TableHead>
-                <TableRow>
-                    {headers.map((header, index) => (
-                        <TableCell key={index}>{header}</TableCell>
-                    ))}
-                </TableRow>
+              <TableRow>
+                {headers.map((header, index) => (
+                  <TableCell key={index}><b>{header}</b></TableCell>
+                ))}
+              </TableRow>
             </TableHead>
-        );
-    };
+          );
+        } else {
+          return null;
+        }
+      };
     const renderResultsTable = () => {
         if (!Array.isArray(data)) {
             // If data is a singular object, create a single table row
@@ -258,15 +264,56 @@ export default function StockAnalysis() {
         }
     
         // If data is an array of objects, render each object as a table row
-        return data.map((row, index) => (
-            <TableRow key={index}>
-                {Object.values(row).map((cell, idx) => (
-                    <TableCell key={idx}>{cell}</TableCell>
-                ))}
-            </TableRow>
-        ));
+        if (!data || typeof data !== 'object' || data === undefined) {
+            return null;
+          }
+        
+          return (
+            <>
+              {data.map((item, index) => (
+                <TableRow key={index}>
+                  {Object.keys(item).map((key, i) => (
+                    <TableCell key={i}>{item[key]}</TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </>
+          );
     };
 
+    const renderResults = () => {
+        if (tabIndex === 0 && selectedIndex === 3) { // Check if on "Timeframe Analysis" tab and "Price Trend" option
+          return (
+            <ResponsiveContainer width="100%" height={400}>
+              <LineChart
+                data={data}
+                margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+              >
+                <XAxis dataKey="date" />
+                <YAxis />
+                <CartesianGrid stroke="#f5f5f5" />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="close" stroke="#ff7300" />
+              </LineChart>
+            </ResponsiveContainer>
+          );
+        } else {
+          return (
+            <TableContainer>
+              <Table>
+                {/* Render table headers based on fetched data */}
+                {renderTableHeaders()}
+                {/* Render table rows based on fetched data */}
+                <TableBody>
+                  {renderResultsTable()}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          );
+        }
+      };
+      
     return (
         <div>
             <NavBar />
@@ -283,11 +330,8 @@ export default function StockAnalysis() {
                 <TableContainer>
                     <Table>
                         {/* Render table headers based on fetched data */}
-                        {renderTableHeaders()}
                         {/* Render table rows based on fetched data */}
-                        <TableBody>
-                            {renderResultsTable()}
-                        </TableBody>
+                        {renderResults()}
                     </Table>
                 </TableContainer>
             </Box>

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
 const config = require('./config.json');
+
 export default function Home() {
   const router = useRouter();
   const [username, setUsername] = useState('');

@@ -17,6 +17,8 @@ const NavBar = () => {
       case 2:
         router.push('/stockoverview');
         break;
+      case 3:
+        router.push('/etfoverview');
       default:
         break;
     }
@@ -28,6 +30,7 @@ const NavBar = () => {
         <Tab label="Home" />
         <Tab label="My Portfolio/News" />
         <Tab label="Stock Overview"/>
+        <Tab label="ETF Overview"/>
       </Tabs>
     </AppBar>
   );

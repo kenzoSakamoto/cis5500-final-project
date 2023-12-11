@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { AppBar, Tabs, Tab, Table, TableContainer, TableHead, TableBody, TableRow, TableCell } from '@mui/material';
+import { AppBar, Button, Tabs, Tab, Table, TableContainer, TableHead, TableBody, TableRow, TableCell } from '@mui/material';
 import { useRouter } from 'next/router';
 import NavBar from './navbar'
 import styles from '../src/app/page.module.css'
 import axios from 'axios';
-import { Line } from 'react-chartjs-2';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const config = require('../src/app/config.json');
 
@@ -22,6 +22,18 @@ export default function Portfolio() {
   const [worth, setWorth] = useState({})
   const [dates, setDates] = useState([])
   const [worthOverTime, setWorthOverTime] = useState([])
+
+  const [showGraphPopup, setShowGraphPopup] = useState(false);
+
+  // Function to open graph popup
+  const openGraphPopup = () => {
+    setShowGraphPopup(true);
+  };
+
+  // Function to close graph popup
+  const closeGraphPopup = () => {
+    setShowGraphPopup(false);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,15 +55,11 @@ export default function Portfolio() {
 
       // Fetch news recommendations data based on user ID and update state
       const worth = await axios.get(`http://${config.server_host}:${config.server_port}/user_worth/${userData.id}`);
-      const newsData = await axios.get(`http://${config.server_host}:${config.server_port}/news_recommendation/${userData.id}?limit=20&industry_limit=5`);
-      const netWorthResponse = await axios.get(`http://${config.server_host}:${config.server_port}/net_worth/${userData.id}`);
-      
-      console.log(netWorthResponse.data)
-      setNewsRecommendations(newsData.data);
       setWorth(worth.data)
-    
-      // setNetWorthOverTime(netWorthResponse.data);
-     console.log(dates);
+      const newsData = await axios.get(`http://${config.server_host}:${config.server_port}/news_recommendation/${userData.id}?limit=20&industry_limit=5`);
+      setNewsRecommendations(newsData.data);
+      const netWorthResponse = await axios.get(`http://${config.server_host}:${config.server_port}/net_worth/${userData.id}`);
+      setNetWorthOverTime(netWorthResponse.data);
     };
 
     if (Object.keys(userData).length > 0) {
@@ -59,52 +67,6 @@ export default function Portfolio() {
     }
   }, [userData]);
 
-  
-  React.useEffect(() => {
-    const fetchPortfolioValue = async () => {
-      // Fetch data and update state
-      // const data = await fetchPortfolioValueFromAPI();
-      // setPortfolioValue(data);
-    };
-
-
-    const fetchNetWorthOverTime = async () => {
-      // Fetch data and update state
-      // const data = await fetchNetWorthOverTimeFromAPI();
-      // setNetWorthOverTime(data);
-    };
-
-    const fetchOwnedStocks = async () => {
-        // Fetch data and update state
-        // const data = await fetchOwnedStocksFromAPI();
-        // setOwnedStocks(data);
-    };
-  
-
-    const fetchOwnedETFs = async () => {
-        // Fetch data and update state
-        // const data = await fetchOwnedETFsFromAPI();
-        // setOwnedETFs(data);
-    };
-
-    fetchPortfolioValue();
-    fetchNetWorthOverTime();
-    fetchOwnedStocks();
-    fetchOwnedETFs();
-  }, []);
-
-  const dataTable = {
-    labels: dates,
-    datasets: [
-      {
-        label: 'Net Worth Over Time',
-        data: worthOverTime,
-        fill: false,
-        borderColor: 'rgb(75, 192, 192)',
-        tension: 0.1,
-      },
-    ],
-  };
 
   useEffect(() => {
     const { data } = router.query;
@@ -116,6 +78,7 @@ export default function Portfolio() {
       // Use 'userData' to set your state variables or perform actions with the passed data
     }
   }, [router.query]);
+
   return (
     <div>
       <NavBar />
@@ -128,102 +91,79 @@ export default function Portfolio() {
             <TableRow>
               <TableCell><b>First Name</b></TableCell>
               <TableCell><b>Last Name</b></TableCell>
+              <TableCell><b>Balance</b></TableCell>
               <TableCell><b>Worth</b></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-              <TableRow>
-                <TableCell>{userData.first_name}</TableCell>
-                <TableCell>{userData.last_name}</TableCell>
-                <TableCell>{worth.worth}</TableCell>
-              </TableRow>
+            <TableRow>
+              <TableCell>{userData.first_name}</TableCell>
+              <TableCell>{userData.last_name}</TableCell>
+              <TableCell>{userData.balance}</TableCell>
+              <TableCell>{worth.worth ? worth.worth : 'Loading...'}</TableCell>
+            </TableRow>
           </TableBody>
         </Table>
       </TableContainer>
 
       <h2>Net Worth Over Time</h2>
-      <TableContainer>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Date</TableCell>
-            <TableCell>Net Worth</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {netWorthOverTime.map((item, index) => (
-            <TableRow key={index}>
-              <TableCell>{item.date}</TableCell>
-              <TableCell>{item.NetWorth}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+      {/* Button to open the popup */}
+      <Button variant="contained" onClick={openGraphPopup}>View Graph</Button>
 
-      <h2>Owned Stocks</h2>
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell><b>Stock Symbol</b></TableCell>
-              <TableCell><b>Quantity</b></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {ownedStocks.map((item, index) => (
-              <TableRow key={index}>
-                <TableCell>{item.symbol}</TableCell>
-                <TableCell>{item.quantity}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Popup */}
+      {showGraphPopup && (
+        <div className="popup">
+          {/* Graph for Net Worth Over Time */}
+          {!netWorthOverTime || netWorthOverTime == [] ? (
+            <p>Loading...</p>
+          ) : (
+            // Graph for Net Worth Over Time
+            <ResponsiveContainer width="100%" height={400}>
+              <LineChart
+                data={netWorthOverTime} // Use your net worth data here
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="NetWorth" stroke="#8884d8" />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+          {/* Close button for the popup */}
+          <Button onClick={closeGraphPopup}>Close</Button>
+        </div>
+      )}
 
-      <h2>Owned ETFs</h2>
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>ETF Symbol</TableCell>
-              <TableCell>Quantity</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {/* Map over ownedETFs data and display */}
-            {/* Replace this with the actual data */}
-            {ownedETFs.map((item, index) => (
-              <TableRow key={index}>
-                <TableCell>{item.symbol}</TableCell>
-                <TableCell>{item.quantity}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      
       <h2>News Recommendations</h2>
-       {/* Display news recommendations data */}
-       <TableContainer>
+      {/* Display news recommendations data */}
+      <TableContainer>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Date</TableCell>
-              <TableCell>Headline</TableCell>
-              <TableCell>Ticker</TableCell>
+              <TableCell><b>Date</b></TableCell>
+              <TableCell><b>Headline</b></TableCell>
+              <TableCell><b>Ticker</b></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {/* Map over newsRecommendations data and display */}
             {/* Replace this with the actual data */}
-            {newsRecommendations.map((item, index) => (
-              <TableRow key={index}>
-                <TableCell>{item.date}</TableCell>
-                <TableCell>{item.Headline}</TableCell>
-                <TableCell>{item.ticker}</TableCell>
+            {newsRecommendations.length > 0 ? (
+              newsRecommendations.map((item, index) => (
+                <TableRow key={index}>
+                  <TableCell>{item.date}</TableCell>
+                  <TableCell>{item.Headline}</TableCell>
+                  <TableCell>{item.ticker}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={3}>Loading...</TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </TableContainer>

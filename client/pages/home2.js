@@ -13,11 +13,6 @@ export default function Home2() {
   const [newsRecommendations, setNewsRecommendations] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [data, setData] = useState([])
-  React.useEffect(() => {
-    const fetchNewsRecommendations = async () => {
-    };
-    fetchNewsRecommendations();
-  }, []);
 
   const handleRealtimeStatsSearch = async () => {
     try {
@@ -29,23 +24,42 @@ export default function Home2() {
             page_size: pageSize,
           },
         });
-      } else if (tabIndex === 1) {
+      }
+
+      // Handle the response data based on the selected tab
+      const responseData = response.data;
+      setData(responseData);
+      console.log(responseData);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+  const handleSearch = async () => {
+    try {
+      let response;
+      if (tabIndex === 1) {
         response = await axios.get(`http://${config.server_host}:${config.server_port}/correlation`, {
           params: {
             page: page,
             page_size: pageSize,
           },
         });
-      }
 
-      // Handle the response data based on the selected tab
-      const responseData = response.data;
-      setData(responseData);
-      console.log(responseData)
+        const responseData = response.data;
+        setData(responseData);
+        console.log(responseData);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     }
   };
+
+  useEffect(() => {
+    if (tabIndex === 0) {
+      handleRealtimeStatsSearch(); // Automatically execute query for first tab
+    }
+  }, [tabIndex, page, pageSize]);
 
   return (
     <div>
@@ -66,19 +80,15 @@ export default function Home2() {
           onChange={(e) => setPageSize(e.target.value)}
           sx={{ mr: 1 }}
         />
-        <TextField
-          label="Option"
-          select
-          value=''
-          onChange={(e) => setTabIndex(e.target.value)}
-          sx={{ mr: 1 }}
-        >
-          <MenuItem value={0}>Most Valued Companies</MenuItem>
-          <MenuItem value={1}>Correlation</MenuItem>
-        </TextField>
-        <Button variant="contained" onClick={handleRealtimeStatsSearch} sx={{ mt: 1 }}>
-          Search
-        </Button>
+        <Tabs value={tabIndex} onChange={(e, newValue) => setTabIndex(newValue)}>
+          <Tab label="Most Valued Companies" />
+          <Tab label="Correlation" />
+        </Tabs>
+        {tabIndex === 1 && (
+          <Button variant="contained" onClick={handleSearch} sx={{ mt: 1 }}>
+            Search
+          </Button>
+        )}
         {/* Table to display results */}
         <TableContainer>
           <Table>
@@ -91,9 +101,9 @@ export default function Home2() {
                 </>)}
                 {tabIndex === 1 && (
                   <>
-                    <TableCell>First Stock</TableCell>
-                    <TableCell>Second Stock</TableCell>
-                    <TableCell>Correlation Coefficient</TableCell>
+                    <TableCell><b>First Stock</b></TableCell>
+                    <TableCell><b>Second Stock</b></TableCell>
+                    <TableCell><b>Correlation Coefficient</b></TableCell>
                   </>
                 )}
               </TableRow>

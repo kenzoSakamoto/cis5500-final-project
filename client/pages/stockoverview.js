@@ -85,13 +85,13 @@ export default function StockAnalysis() {
     
                 case 1: // Stock News
                     console.log(ticker)
-                    const stockNewsResponse = await axios.get(`http://${config.server_host}:${config.server_port}/stock_news?ticker=${specificTicker}`);
+                    const stockNewsResponse = await axios.get(`http://${config.server_host}:${config.server_port}/stock_news/${specificTicker}`);
                     responseData = stockNewsResponse.data;
                     break;
     
                 case 4: // Profit and Loss Statement
                     console.log("quarter: " + specificQuarter)
-                    const profitLossResponse = await axios.get(`http://${config.server_host}:${config.server_port}/profit_and_loss_statement?ticker=${specificTicker}&year=${specificYear}&quarter=${specificQuarter}`);
+                    const profitLossResponse = await axios.get(`http://${config.server_host}:${config.server_port}/profit_and_loss_statement/${specificTicker}&year=${specificYear}&quarter=${specificQuarter}`);
                     responseData = profitLossResponse.data;
                     break;
     
@@ -254,13 +254,15 @@ export default function StockAnalysis() {
     const renderResultsTable = () => {
         if (!Array.isArray(data)) {
             // If data is a singular object, create a single table row
-            return (
-                <TableRow>
-                    {Object.values(data).map((cell, idx) => (
-                        <TableCell key={idx}>{cell}</TableCell>
-                    ))}
-                </TableRow>
-            );
+            if (!(data === undefined) && data) {
+                return (
+                    <TableRow>
+                        {Object.values(data).map((cell, idx) => (
+                            <TableCell key={idx}>{cell}</TableCell>
+                        ))}
+                    </TableRow>
+                );
+            }
         }
     
         // If data is an array of objects, render each object as a table row

@@ -36,34 +36,25 @@ export default function Portfolio() {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      // Fetch portfolio data and update state
-      // const portfolioData = await fetchPortfolioData(userData.id);
-      // setPortfolioValue(portfolioData);
-
-      // Fetch net worth over time data and update state
-      // const netWorthData = await fetchNetWorthOverTime(userData.id);
-      // setNetWorthOverTime(netWorthData);
-
-      // Fetch owned stocks data and update state
-      // const ownedStocksData = await fetchOwnedStocks(userData.id);
-      // setOwnedStocks(ownedStocksData);
-
-      // Fetch owned ETFs data and update state
-      // const ownedETFsData = await fetchOwnedETFs(userData.id);
-      // setOwnedETFs(ownedETFsData);
-
+    const fetchWorth = async () => {
       // Fetch news recommendations data based on user ID and update state
       const worth = await axios.get(`http://${config.server_host}:${config.server_port}/user_worth/${userData.id}`);
       setWorth(worth.data)
+    };
+
+    const fetchNews = async () => {
       const newsData = await axios.get(`http://${config.server_host}:${config.server_port}/news_recommendation/${userData.id}?limit=20&industry_limit=5`);
       setNewsRecommendations(newsData.data);
+    };
+    const fetchNetWorth = async () => {
       const netWorthResponse = await axios.get(`http://${config.server_host}:${config.server_port}/net_worth/${userData.id}`);
       setNetWorthOverTime(netWorthResponse.data);
     };
 
     if (Object.keys(userData).length > 0) {
-      fetchData();
+      fetchWorth();
+      fetchNews();
+      fetchNetWorth();
     }
   }, [userData]);
 

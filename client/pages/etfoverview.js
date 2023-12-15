@@ -32,18 +32,18 @@ export default function ETFOverview() {
             console.log("hello")
             switch (activeTab) {
                 case 0:
-                    const topETFResponse = await axios.get(`http://${config.server_host}:${config.server_port}/topstock?start_date=${startDate}&end_date=${endDate}&etf=1`);
+                    const topETFResponse = await axios.get(`http://${config.server_host}:${config.server_port}/topstock?start_date=${startDate}&end_date=${endDate}&etf=Y`);
                     responseData = topETFResponse.data.data;
                     break;
                 case 1:
                     console.log("traded etf")
-                    const tradedETFResponse = await axios.get(`http://${config.server_host}:${config.server_port}/tradedstock?start_date=${startDate}&end_date=${endDate}&etf=1`);
+                    const tradedETFResponse = await axios.get(`http://${config.server_host}:${config.server_port}/tradedstock?start_date=${startDate}&end_date=${endDate}&etf=Y`);
                     responseData = tradedETFResponse.data.data;
                     console.log("traded etf finished")
                     break;
                 case 2:
                     console.log("volatile etf")
-                    const volatileETFResponse = await axios.get(`http://${config.server_host}:${config.server_port}/volatilestock?start_date=${startDate}&end_date=${endDate}&etf=1`);
+                    const volatileETFResponse = await axios.get(`http://${config.server_host}:${config.server_port}/volatilestock?start_date=${startDate}&end_date=${endDate}&etf=Y`);
                     responseData = volatileETFResponse.data;
                     console.log("volatile etf finished")
                     break;

@@ -82,10 +82,10 @@ const tradedstock = async function(req, res) {
   SELECT sp.Ticker, s.Name, SUM(sp.Volume) AS TotalVolume
   FROM SecurityPrices sp
   JOIN Securities s ON sp.Ticker = s.Ticker
-  WHERE date BETWEEN '${start_date}' AND '${end_date}'
-  GROUP BY sp.Ticker, s.Name and s.ETF = '${etf}'
+  WHERE date BETWEEN '${start_date}' AND '${end_date}' AND s.ETF = '${etf}'
+  GROUP BY sp.Ticker, s.Name 
   ORDER BY TotalVolume DESC
-  LIMIT 10;
+  LIMIT 10;  
   `, (err, data) => {
     if (err || data.length == 0) {
       console.log("error");
@@ -101,7 +101,7 @@ const tradedstock = async function(req, res) {
 const volatilestock = async function(req, res) {
   const start_date = req.query.start_date;
   const end_date = req.query.end_date;
-  const etf = req.query.etf ?? 'Y'
+  const etf = req.query.etf ?? 'Yes'
   connection.query(`
   WITH DailyVolatility AS (
     SELECT sp.Ticker,DATE(sp.Date) AS Date,(sp.High - sp.Low) AS DailyRange
@@ -170,38 +170,37 @@ const correlation = async function(req, res) {
 
   if (!page) {
     connection.query(`
-    WITH StockReturns AS (
-      SELECT
-          SP1.Ticker AS Ticker1,
-          SP2.Ticker AS Ticker2,
-          AVG(SP1.Close) AS AvgClose1,
-          AVG(SP2.Close) AS AvgClose2,
-          STDDEV(SP1.Close) AS StdDev1,
-          STDDEV(SP2.Close) AS StdDev2,
-          COUNT(*) AS N
-      FROM SecurityPrices SP1
-      JOIN SecurityPrices SP2 ON SP1.Date = SP2.Date AND SP1.Ticker < SP2.Ticker
-      WHERE SP1.Ticker <> SP2.Ticker
-      GROUP BY SP1.Ticker, SP2.Ticker
+    WITH TopStocks AS (
+      SELECT Ticker
+      FROM SecurityPrices
+      GROUP BY Ticker
+      ORDER BY SUM(Volume) DESC
+      LIMIT 20
     ),
-    CorrelationCalc AS (
-      SELECT
-          SR.Ticker1,
-          SR.Ticker2,
-          SUM((SP1.Close - SR.AvgClose1) * (SP2.Close - SR.AvgClose2)) / ((N - 1) * SR.StdDev1 * SR.StdDev2) AS CorrelationCoefficient
-      FROM StockReturns SR
-      JOIN SecurityPrices SP1 ON SR.Ticker1 = SP1.Ticker
-      JOIN SecurityPrices SP2 ON SR.Ticker2 = SP2.Ticker AND SP1.Date = SP2.Date
-      GROUP BY SR.Ticker1, SR.Ticker2, SR.AvgClose1, SR.AvgClose2, SR.StdDev1, SR.StdDev2, N
+    PriceChanges AS (
+        SELECT SP.Date, SP.Ticker, (SP.Close - LAG(SP.Close) OVER (PARTITION BY SP.Ticker ORDER BY SP.Date)) / LAG(SP.Close) OVER (PARTITION BY SP.Ticker ORDER BY SP.Date) AS PriceChange
+        FROM SecurityPrices SP
+        JOIN TopStocks TS ON SP.Ticker = TS.Ticker
+    ),
+    CorrelationData AS (
+        SELECT
+            PC1.Ticker AS Ticker1,
+            PC2.Ticker AS Ticker2,
+            AVG(PC1.PriceChange * PC2.PriceChange) AS Covariance,
+            STDDEV(PC1.PriceChange) AS StdDev1,
+            STDDEV(PC2.PriceChange) AS StdDev2
+        FROM PriceChanges PC1
+        JOIN PriceChanges PC2 ON PC1.Date = PC2.Date AND PC1.Ticker < PC2.Ticker
+        GROUP BY PC1.Ticker, PC2.Ticker
     )
     SELECT
-      S1.Name AS Stock1_Name,
-      S2.Name AS Stock2_Name,
-      CC.CorrelationCoefficient
-    FROM CorrelationCalc CC
-    JOIN Securities S1 ON CC.Ticker1 = S1.Ticker
-    JOIN Securities S2 ON CC.Ticker2 = S2.Ticker
-    ORDER BY CC.CorrelationCoefficient DESC
+        S1.Name AS Stock1_Name,
+        S2.Name AS Stock2_Name,
+        CD.Covariance / (CD.StdDev1 * CD.StdDev2) AS CorrelationCoefficient
+    FROM CorrelationData CD
+    JOIN Securities S1 ON CD.Ticker1 = S1.Ticker
+    JOIN Securities S2 ON CD.Ticker2 = S2.Ticker
+    ORDER BY CorrelationCoefficient DESC
     `, (err, data) => {
       if (err || data.length === 0) {
         console.log(err);
@@ -214,38 +213,37 @@ const correlation = async function(req, res) {
     const offset = pageSize * (page-1);
 
     connection.query(`
-    WITH StockReturns AS (
-      SELECT
-          SP1.Ticker AS Ticker1,
-          SP2.Ticker AS Ticker2,
-          AVG(SP1.Close) AS AvgClose1,
-          AVG(SP2.Close) AS AvgClose2,
-          STDDEV(SP1.Close) AS StdDev1,
-          STDDEV(SP2.Close) AS StdDev2,
-          COUNT(*) AS N
-      FROM SecurityPrices SP1
-      JOIN SecurityPrices SP2 ON SP1.Date = SP2.Date AND SP1.Ticker < SP2.Ticker
-      WHERE SP1.Ticker <> SP2.Ticker
-      GROUP BY SP1.Ticker, SP2.Ticker
+    WITH TopStocks AS (
+      SELECT Ticker
+      FROM SecurityPrices
+      GROUP BY Ticker
+      ORDER BY SUM(Volume) DESC
+      LIMIT 20
     ),
-    CorrelationCalc AS (
-      SELECT
-          SR.Ticker1,
-          SR.Ticker2,
-          SUM((SP1.Close - SR.AvgClose1) * (SP2.Close - SR.AvgClose2)) / ((N - 1) * SR.StdDev1 * SR.StdDev2) AS CorrelationCoefficient
-      FROM StockReturns SR
-      JOIN SecurityPrices SP1 ON SR.Ticker1 = SP1.Ticker
-      JOIN SecurityPrices SP2 ON SR.Ticker2 = SP2.Ticker AND SP1.Date = SP2.Date
-      GROUP BY SR.Ticker1, SR.Ticker2, SR.AvgClose1, SR.AvgClose2, SR.StdDev1, SR.StdDev2, N
+    PriceChanges AS (
+        SELECT SP.Date, SP.Ticker, (SP.Close - LAG(SP.Close) OVER (PARTITION BY SP.Ticker ORDER BY SP.Date)) / LAG(SP.Close) OVER (PARTITION BY SP.Ticker ORDER BY SP.Date) AS PriceChange
+        FROM SecurityPrices SP
+        JOIN TopStocks TS ON SP.Ticker = TS.Ticker
+    ),
+    CorrelationData AS (
+        SELECT
+            PC1.Ticker AS Ticker1,
+            PC2.Ticker AS Ticker2,
+            AVG(PC1.PriceChange * PC2.PriceChange) AS Covariance,
+            STDDEV(PC1.PriceChange) AS StdDev1,
+            STDDEV(PC2.PriceChange) AS StdDev2
+        FROM PriceChanges PC1
+        JOIN PriceChanges PC2 ON PC1.Date = PC2.Date AND PC1.Ticker < PC2.Ticker
+        GROUP BY PC1.Ticker, PC2.Ticker
     )
     SELECT
-      S1.Name AS Stock1_Name,
-      S2.Name AS Stock2_Name,
-      CC.CorrelationCoefficient
-    FROM CorrelationCalc CC
-    JOIN Securities S1 ON CC.Ticker1 = S1.Ticker
-    JOIN Securities S2 ON CC.Ticker2 = S2.Ticker
-    ORDER BY CC.CorrelationCoefficient DESC
+        S1.Name AS Stock1_Name,
+        S2.Name AS Stock2_Name,
+        CD.Covariance / (CD.StdDev1 * CD.StdDev2) AS CorrelationCoefficient
+    FROM CorrelationData CD
+    JOIN Securities S1 ON CD.Ticker1 = S1.Ticker
+    JOIN Securities S2 ON CD.Ticker2 = S2.Ticker
+    ORDER BY CorrelationCoefficient DESC  
     LIMIT ${pageSize}
     OFFSET ${offset}
     `, (err, data) => {
@@ -263,12 +261,12 @@ const correlation = async function(req, res) {
 // Route 7: GET /price_trend/:ticker
 const price_trend = async function(req, res) {
   connection.query(`
-    SELECT date, close
-    FROM SecurityPrices
-    WHERE ticker = '${req.params.ticker}'
-    AND date >= '${req.query.start_date}'
-    AND date <= '${req.query.end_date}'
-    ORDER BY date ASC
+  SELECT date, close
+  FROM SecurityPrices
+  WHERE ticker = '${req.params.ticker}'
+  AND date >= '${req.query.start_date}'
+  AND date <= '${req.query.end_date}'
+  ORDER BY date ASC
   `, (err, data) => {
     if (err || data.length === 0) {
       console.log(err);
@@ -299,19 +297,19 @@ const stock_news = async function(req, res) {
 // Route 9: GET /profit_and_loss_statement/:ticker
 const profit_and_loss_statement = async function(req, res) {
   connection.query(`
-    SELECT
-    year,
-    quarter,
-    SUM(CASE WHEN indicator = 'Final Revenue' THEN amount ELSE 0 END) AS Revenue,
-    SUM(CASE WHEN indicator = 'Gross Profit' THEN amount ELSE 0 END) AS GrossProfit,
-    SUM(CASE WHEN indicator = 'Operating Income (Loss)' THEN Amount ELSE 0 END) AS
-    OperatingIncome,
-    SUM(CASE WHEN indicator = 'Net Income (Loss)' THEN Amount ELSE 0 END) AS NetIncome
-    FROM Stocks
-    WHERE ticker = '${req.params.ticker}'
-    AND year = '${req.query.year}'
-    AND quarter = '${req.query.quarter}'
-    GROUP BY year, quarter;
+SELECT
+year,
+quarter,
+SUM(CASE WHEN indicator = 'Final Revenue' THEN amount ELSE 0 END) AS Revenue,
+SUM(CASE WHEN indicator = 'Gross Profit' THEN amount ELSE 0 END) AS GrossProfit,
+SUM(CASE WHEN indicator = 'Operating Income (Loss)' THEN Amount ELSE 0 END) AS
+OperatingIncome,
+SUM(CASE WHEN indicator = 'Net Income (Loss)' THEN Amount ELSE 0 END) AS NetIncome
+FROM Stocks
+WHERE ticker = '${req.params.ticker}'
+AND year = '${req.query.year}'
+AND quarter = '${req.query.quarter}'
+GROUP BY year, quarter;
   `, (err, data) => {
     if (err || data.length === 0) {
       console.log(err);
@@ -326,16 +324,18 @@ const profit_and_loss_statement = async function(req, res) {
 const balanceSheet = async function(req, res) {
 
   connection.query(`
-  SELECT
-    Year,
-    Quarter,
-    SUM(CASE WHEN Indicator = 'Assets' THEN Amount ELSE 0 END) AS TotalAssets,
-    SUM(CASE WHEN Indicator = 'Cash and Cash Equivalents, at Carrying Value' THEN Amount ELSE 0 END) AS CashAndCashEquivalents,
-    SUM(CASE WHEN Indicator = 'Total Liabilities and Equity' THEN Amount ELSE 0 END) AS TotalLiabilitiesAndEquity,
-    SUM(CASE WHEN Indicator = 'Total Equity' THEN Amount ELSE 0 END) AS TotalEquity
-  FROM Stocks
-  WHERE Ticker = '${req.params.ticker}'
-  GROUP BY Year, Quarter;
+SELECT
+Year,
+Quarter,
+SUM(CASE WHEN Indicator = 'Assets' THEN Amount ELSE 0 END) AS TotalAssets,
+SUM(CASE WHEN Indicator = 'Cash and Cash Equivalents, at Carrying Value' THEN Amount ELSE 0 END) AS CashAndCashEquivalents,
+SUM(CASE WHEN Indicator = 'Total Liabilities and Equity' THEN Amount ELSE 0 END) AS TotalLiabilitiesAndEquity,
+SUM(CASE WHEN Indicator = 'Total Equity' THEN Amount ELSE 0 END) AS TotalEquity
+FROM Stocks
+WHERE Ticker = '${req.params.ticker}'
+AND year = '${req.query.year}'
+AND quarter = '${req.query.quarter}'
+GROUP BY Year, Quarter;
   `,
   (err, data) => {
     if (err || data.length === 0) {
@@ -420,46 +420,46 @@ const newsRecommendation = async function(req, res) {
   const limit = req.query.limit ? req.query.limit : 20;
 
   connection.query(`
-  WITH TopIndustries AS (
-      SELECT Industry
-      FROM Transactions
-      JOIN StockInfo ON Transactions.Ticker = StockInfo.ticker
-      WHERE UserID = '${req.params.user_id}'
-      GROUP BY Industry
-      ORDER BY SUM(ABS(Quantity)) DESC
-      LIMIT ${industry_limit}
-  ),
-  Positive AS (
-      SELECT Industry
-      From Transactions
-      JOIN StockInfo ON Transactions.Ticker = StockInfo.ticker
-      WHERE UserID = '${req.params.user_id}' AND Quantity > 0
-      GROUP BY Industry
-      ORDER BY SUM(Quantity) DESC
-      LIMIT ${industry_limit}
-  )
-  SELECT DISTINCT date, Headline, FinancialNews.ticker
-  FROM FinancialNews
-  JOIN Stocks ON FinancialNews.Ticker = Stocks.ticker
-  WHERE FinancialNews.Ticker IN (
+    WITH TopIndustries AS (
+        SELECT Industry
+        FROM Transactions
+        JOIN StockInfo ON Transactions.Ticker = StockInfo.ticker
+        WHERE UserID = '${req.params.user_id}'
+        GROUP BY Industry
+        ORDER BY SUM(ABS(Quantity)) DESC
+        LIMIT ${industry_limit}
+    ),
+    Positive AS (
+        SELECT Industry
+        From Transactions
+        JOIN StockInfo ON Transactions.Ticker = StockInfo.ticker
+        WHERE UserID = '${req.params.user_id}' AND Quantity > 0
+        GROUP BY Industry
+        ORDER BY SUM(Quantity) DESC
+        LIMIT ${industry_limit}
+    )
+    SELECT DISTINCT date, Headline, FinancialNews.ticker
+    FROM FinancialNews
+    JOIN Stocks ON FinancialNews.Ticker = Stocks.ticker
+    WHERE FinancialNews.Ticker IN (
+        SELECT StockInfo.ticker
+        FROM StockInfo
+        JOIN Transactions ON Transactions.Ticker = StockInfo.ticker
+        WHERE Industry IN (
+            SELECT industry
+            FROM TopIndustries
+        )
+    ) OR FinancialNews.ticker IN (
       SELECT StockInfo.ticker
-      FROM StockInfo
-      JOIN Transactions ON Transactions.Ticker = StockInfo.ticker
-      WHERE Industry IN (
-          SELECT industry
-          FROM TopIndustries
-      )
-  ) OR FinancialNews.ticker IN (
-    SELECT StockInfo.ticker
-      FROM StockInfo
-      JOIN Transactions ON StockInfo.ticker = Transactions.Ticker
-      WHERE Industry IN (
-          SELECT industry
-          FROM Positive
-      )
-  )
-  ORDER BY date DESC
-  LIMIT ${limit};
+        FROM StockInfo
+        JOIN Transactions ON StockInfo.ticker = Transactions.Ticker
+        WHERE Industry IN (
+            SELECT industry
+            FROM Positive
+        )
+    )
+    ORDER BY date DESC
+    LIMIT ${limit};
   `,
   (err, data) => {
     if (err || data.length === 0) {

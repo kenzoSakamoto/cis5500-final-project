@@ -40,7 +40,7 @@ const signin = async function(req, res) {
 const topstock = async function(req, res) {
   const start_date = req.query.start_date;
   const end_date = req.query.end_date;
-  const etf = req.query.etf ?? 0
+  const etf = req.query.etf ?? 'Y'
   connection.query(`
     WITH StartPrices AS (
       SELECT sp.Ticker, sp.Close AS StartClose
@@ -77,7 +77,7 @@ const topstock = async function(req, res) {
 const tradedstock = async function(req, res) {
   const start_date = req.query.start_date;
   const end_date = req.query.end_date;
-  const etf = req.query.etf ?? 'Yes'
+  const etf = req.query.etf ?? 'Y'
   connection.query(`
   SELECT sp.Ticker, s.Name, SUM(sp.Volume) AS TotalVolume
   FROM SecurityPrices sp
@@ -101,7 +101,7 @@ const tradedstock = async function(req, res) {
 const volatilestock = async function(req, res) {
   const start_date = req.query.start_date;
   const end_date = req.query.end_date;
-  const etf = req.query.etf ?? 'Yes'
+  const etf = req.query.etf ?? 'Y'
   connection.query(`
   WITH DailyVolatility AS (
     SELECT sp.Ticker,DATE(sp.Date) AS Date,(sp.High - sp.Low) AS DailyRange

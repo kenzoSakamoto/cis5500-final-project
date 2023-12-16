@@ -306,7 +306,7 @@ SUM(CASE WHEN indicator = 'Gross Profit' THEN amount ELSE 0 END) AS GrossProfit,
 SUM(CASE WHEN indicator = 'Operating Income (Loss)' THEN Amount ELSE 0 END) AS
 OperatingIncome,
 SUM(CASE WHEN indicator = 'Net Income (Loss)' THEN Amount ELSE 0 END) AS NetIncome
-FROM Stocks
+FROM StockFinancials
 WHERE ticker = '${req.params.ticker}'
 AND year = '${req.query.year}'
 AND quarter = '${req.query.quarter}'
@@ -332,7 +332,7 @@ SUM(CASE WHEN Indicator = 'Assets' THEN Amount ELSE 0 END) AS TotalAssets,
 SUM(CASE WHEN Indicator = 'Cash and Cash Equivalents, at Carrying Value' THEN Amount ELSE 0 END) AS CashAndCashEquivalents,
 SUM(CASE WHEN Indicator = 'Total Liabilities and Equity' THEN Amount ELSE 0 END) AS TotalLiabilitiesAndEquity,
 SUM(CASE WHEN Indicator = 'Total Equity' THEN Amount ELSE 0 END) AS TotalEquity
-FROM Stocks
+FROM StockFinancials
 WHERE Ticker = '${req.params.ticker}'
 AND year = '${req.query.year}'
 AND quarter = '${req.query.quarter}'
@@ -354,14 +354,14 @@ const marketShare = async function(req, res) {
   connection.query(`
   WITH IndustryRevenue AS (
       SELECT s.Industry, SUM(sf.Amount) AS TotalIndustryRevenue
-      FROM Stocks sf
+      FROM StockFinancials sf
       JOIN StockInfo s ON sf.Ticker = s.Ticker
       WHERE sf.Indicator = 'Final Revenue'
       GROUP BY s.Industry
   ),
   CompanyRevenue AS (
       SELECT s.Industry, sf.Ticker, SUM(sf.Amount) AS CompanyRevenue
-      FROM Stocks sf
+      FROM StockFinancials sf
       JOIN StockInfo s ON sf.Ticker = s.Ticker
       WHERE sf.Indicator = 'Final Revenue'
       GROUP BY s.Industry, sf.Ticker
@@ -441,7 +441,7 @@ const newsRecommendation = async function(req, res) {
     )
     SELECT DISTINCT date, Headline, FinancialNews.ticker
     FROM FinancialNews
-    JOIN Stocks ON FinancialNews.Ticker = Stocks.ticker
+    JOIN StockFinancials ON FinancialNews.Ticker = StockFinancials.ticker
     WHERE FinancialNews.Ticker IN (
         SELECT StockInfo.ticker
         FROM StockInfo

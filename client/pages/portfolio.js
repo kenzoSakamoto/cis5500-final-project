@@ -8,12 +8,15 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 
 const config = require('../src/app/config.json');
 
+
 export default function Portfolio() {
   // State variables to hold data fetched from backend
   const data = "";
   const router = useRouter();
   const [portfolioValue, setPortfolioValue] = useState([]);
   const [netWorthOverTime, setNetWorthOverTime] = useState([]);
+  const [movingAvg, setMovingAvg] = useState([{date:"1", avg: 1, company: 1},{date:"2", avg: 2, company: 2},{date:"3", avg: 3, company: 3}]);
+  const [companies, setCompanies] = useState({});
   const [ownedStocks, setOwnedStocks] = useState([]);
   const [ownedETFs, setOwnedETFs] = useState([]);
   const [newsRecommendations, setNewsRecommendations] = useState([]);
@@ -24,8 +27,20 @@ export default function Portfolio() {
   const [worthOverTime, setWorthOverTime] = useState([])
 
   const [showGraphPopup, setShowGraphPopup] = useState(false);
+  const [showGraphAvgPopup, setShowGraphAvgPopup] = useState(false);
 
   // Function to open graph popup
+
+  const transformedData = (data) => data.reduce((acc, entry) => {
+    const index = acc.findIndex(item => item.company === entry.company);
+    if (index === -1) {
+      acc.push({ company: entry.company, data: [{ date: entry.date, value: entry.moving_average }] });
+    } else {
+      acc[index].data.push({ date: entry.date, value: entry.moving_average });
+    }
+    return acc;
+  }, []);
+
   const openGraphPopup = () => {
     setShowGraphPopup(true);
   };
@@ -33,6 +48,16 @@ export default function Portfolio() {
   // Function to close graph popup
   const closeGraphPopup = () => {
     setShowGraphPopup(false);
+  };
+
+  // Function to open graph popup
+  const openGraphAvgPopup = () => {
+    setShowGraphAvgPopup(true);
+  };
+
+  // Function to close graph popup
+  const closeGraphAvgPopup = () => {
+    setShowGraphAvgPopup(false);
   };
 
   useEffect(() => {
@@ -51,10 +76,21 @@ export default function Portfolio() {
       setNetWorthOverTime(netWorthResponse.data);
     };
 
+
+    const fetchAvg = async () => {
+      const moving_avg = await axios.get(`http://${config.server_host}:${config.server_port}/moving_avg/${userData.id}`);
+      let dat = transformedData(moving_avg.data);
+      setMovingAvg(dat);
+      console.log("got data");
+    };
+
+
+
     if (Object.keys(userData).length > 0) {
       fetchWorth();
       fetchNews();
       fetchNetWorth();
+      fetchAvg();
     }
   }, [userData]);
 
@@ -125,6 +161,59 @@ export default function Portfolio() {
           )}
           {/* Close button for the popup */}
           <Button onClick={closeGraphPopup}>Close</Button>
+        </div>
+      )}
+
+      <h2>Assets Moving Average</h2>
+      {/* Button to open the popup */}
+      <Button variant="contained" onClick={openGraphAvgPopup}>View Graph</Button>
+
+      {/* Popup */}
+      {showGraphAvgPopup && (
+        <div className="popup">
+          {/* Graph for Net Worth Over Time */}
+          {!movingAvg || movingAvg == [] ? (
+            <p>Loading...</p>
+          ) : (
+            // Graph for Net Worth Over Time
+            <ResponsiveContainer width="100%" height={400}>
+            {
+              <LineChart width={800} height={400} data={movingAvg}>
+              <CartesianGrid strokeDasharray="3 3" />
+
+              <YAxis />
+              <Tooltip />
+              <Legend />
+
+              <XAxis dataKey="date" xAxisId={movingAvg[0].company}
+              tickFormatter={(tick)=>new Date(tick).toISOString()}/>
+
+              {
+                movingAvg.map(entry => (
+                  <XAxis dataKey="date" xAxisId={entry.company} hide={true}
+                  tickFormatter={(tick)=>new Date(tick).toISOString()}/>
+                ))
+              }
+              {
+                movingAvg.map(entry => (
+                  <Line
+                    key={entry.company}
+                    type="monotone"
+                    dataKey="value"
+                    xAxisId={entry.company}
+                    data={entry.data}
+                    name={entry.company}
+                    stroke={`#${Math.floor(Math.random()*16777215).toString(16)}`} // Random color for each line
+                  />
+                ))
+              }
+
+            </LineChart>
+          }
+            </ResponsiveContainer>
+          )}
+          {/* Close button for the popup */}
+          <Button onClick={closeGraphAvgPopup}>Close</Button>
         </div>
       )}
 

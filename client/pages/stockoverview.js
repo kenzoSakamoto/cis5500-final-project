@@ -66,7 +66,7 @@ export default function StockAnalysis() {
                     responseData = [];
                     break;
             }
-    
+
             // Use responseData to populate the table
             // Update state or renderResultsTable to display fetched data in the table
             console.log(responseData)
@@ -82,37 +82,37 @@ export default function StockAnalysis() {
             let responseData = [];
             switch (selectedIndex) {
                 // Other cases handling
-    
+
                 case 1: // Stock News
                     console.log(ticker)
                     const stockNewsResponse = await axios.get(`http://${config.server_host}:${config.server_port}/stock_news/${specificTicker}`);
                     responseData = stockNewsResponse.data;
                     break;
-    
+
                 case 4: // Profit and Loss Statement
                     console.log("quarter: " + specificQuarter)
-                    const profitLossResponse = await axios.get(`http://${config.server_host}:${config.server_port}/profit_and_loss_statement/${specificTicker}&year=${specificYear}&quarter=${specificQuarter}`);
+                    const profitLossResponse = await axios.get(`http://${config.server_host}:${config.server_port}/profit_and_loss_statement/${specificTicker}?year=${specificYear}&quarter=${specificQuarter}`);
                     responseData = profitLossResponse.data;
                     break;
-    
+
                 case 0: // Balance Sheet
-                    const balanceSheetResponse = await axios.get(`http://${config.server_host}:${config.server_port}/balance_sheet/${specificTicker}`);
+                    const balanceSheetResponse = await axios.get(`http://${config.server_host}:${config.server_port}/balance_sheet/${specificTicker}?year=${specificYear}&quarter=${specificQuarter}`);
                     responseData = balanceSheetResponse.data;
                     break;
-    
+
                 case 3: // Market Share
                     console.log("market share query")
                     const marketShareResponse = await axios.get(`http://${config.server_host}:${config.server_port}/market_share/${specificTicker}`);
                     responseData = marketShareResponse.data;
                     console.log(responseData)
                     break;
-    
+
                 default:
                     break;
             }
             setData(responseData)
             console.log(responseData)
-    
+
             // Use responseData to populate the table
             // Update state or renderResultsTable to display fetched data in the table
         } catch (error) {
@@ -181,7 +181,7 @@ export default function StockAnalysis() {
                         onChange={(e) => setSpecificTicker(e.target.value)}
                         sx={{ mr: 1 }}
                         />
-                        {selectedIndex !== undefined && selectedIndex === 4 && (
+                        {selectedIndex !== undefined && selectedIndex % 4 === 0 && (
                         <>
                             <TextField
                             label="Year"
@@ -228,7 +228,7 @@ export default function StockAnalysis() {
     };
     const renderTableHeaders = () => {
         let headers = null;
-      
+
         if (!Array.isArray(data)) {
           headers = data ? Object.keys(data) : null;
         } else {
@@ -236,7 +236,7 @@ export default function StockAnalysis() {
             headers = Object.keys(data[0]);
           }
         }
-      
+
         if (headers && headers !== undefined) {
           return (
             <TableHead>
@@ -264,12 +264,12 @@ export default function StockAnalysis() {
                 );
             }
         }
-    
+
         // If data is an array of objects, render each object as a table row
         if (!data || typeof data !== 'object' || data === undefined) {
             return null;
           }
-        
+
           return (
             <>
               {data.map((item, index) => (
@@ -315,7 +315,7 @@ export default function StockAnalysis() {
           );
         }
       };
-      
+
     return (
         <div>
             <NavBar />

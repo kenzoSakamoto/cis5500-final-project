@@ -23,7 +23,7 @@ export default function Login() {
           password: password,
         },
       });
-      
+
       const userData = response.data;
       console.log(userData);
 
@@ -69,9 +69,6 @@ export default function Login() {
           <br />
           <Button onClick={handleLogin}type="submit" variant="contained" color="primary">
             Login
-          </Button>
-          <Button onClick={handleCreateAccount} variant="contained" color="secondary">
-            Create Account
           </Button>
         </form>
         <div>{/* Show error message if needed */}</div>

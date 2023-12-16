@@ -25,6 +25,8 @@ app.get('/market_share/:ticker', routes.marketShare);
 app.get('/user_worth/:user_id', routes.userWorth);
 app.get('/news_recommendation/:user_id', routes.newsRecommendation);
 app.get('/net_worth/:user_id', routes.netWorth);
+app.get('/moving_avg/:user_id', routes.movingAvg);
+app.get('/stock_info/:ticker', routes.stockInfo);
 
 
 app.listen(config.server_port, () => {

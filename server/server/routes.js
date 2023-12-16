@@ -79,15 +79,15 @@ const topstock = async function(req, res) {
 const tradedstock = async function(req, res) {
   const start_date = req.query.start_date;
   const end_date = req.query.end_date;
-  const etf = req.query.etf ?? 'Y'
+  const etf = req.query.etf ?? 0
   connection.query(`
   SELECT sp.Ticker, s.Name, SUM(sp.Volume) AS TotalVolume
   FROM SecurityPrices sp
   JOIN Securities s ON sp.Ticker = s.Ticker
-  WHERE date BETWEEN '${start_date}' AND '${end_date}' AND s.ETF = '${etf}'
-  GROUP BY sp.Ticker, s.Name 
+  WHERE date BETWEEN '${start_date}' AND '${end_date}' AND s.ETF = ${etf}
+  GROUP BY sp.Ticker, s.Name
   ORDER BY TotalVolume DESC
-  LIMIT 10;  
+  LIMIT 10;
   `, (err, data) => {
     if (err || data.length == 0) {
       console.log("error");
@@ -173,11 +173,13 @@ const correlation = async function(req, res) {
   if (!page) {
     connection.query(`
     WITH TopStocks AS (
-      SELECT Ticker
-      FROM SecurityPrices
+      SELECT DISTINCT sp.Ticker
+      FROM SecurityPrices sp
+      JOIN Securities s ON s.Ticker = sp.Ticker
+      WHERE ETF = 0
       GROUP BY Ticker
       ORDER BY SUM(Volume) DESC
-      LIMIT 20
+      LIMIT 10
     ),
     PriceChanges AS (
         SELECT SP.Date, SP.Ticker, (SP.Close - LAG(SP.Close) OVER (PARTITION BY SP.Ticker ORDER BY SP.Date)) / LAG(SP.Close) OVER (PARTITION BY SP.Ticker ORDER BY SP.Date) AS PriceChange
@@ -216,11 +218,13 @@ const correlation = async function(req, res) {
 
     connection.query(`
     WITH TopStocks AS (
-      SELECT Ticker
-      FROM SecurityPrices
+      SELECT DISTINCT sp.Ticker
+      FROM SecurityPrices sp
+      JOIN Securities s ON s.Ticker = sp.Ticker
+      WHERE ETF = 0
       GROUP BY Ticker
       ORDER BY SUM(Volume) DESC
-      LIMIT 20
+      LIMIT 10
     ),
     PriceChanges AS (
         SELECT SP.Date, SP.Ticker, (SP.Close - LAG(SP.Close) OVER (PARTITION BY SP.Ticker ORDER BY SP.Date)) / LAG(SP.Close) OVER (PARTITION BY SP.Ticker ORDER BY SP.Date) AS PriceChange
@@ -245,7 +249,7 @@ const correlation = async function(req, res) {
     FROM CorrelationData CD
     JOIN Securities S1 ON CD.Ticker1 = S1.Ticker
     JOIN Securities S2 ON CD.Ticker2 = S2.Ticker
-    ORDER BY CorrelationCoefficient DESC  
+    ORDER BY CorrelationCoefficient DESC
     LIMIT ${pageSize}
     OFFSET ${offset}
     `, (err, data) => {
@@ -554,6 +558,57 @@ const netWorth = async function(req, res) {
   });
 }
 
+// Route 15: GET /moving_avg/:user_id
+const movingAvg = async function(req, res) {
+  connection.query(`
+  WITH TopStocks AS (
+    SELECT DISTINCT Ticker
+    FROM Transactions
+    WHERE UserID = ${req.params.user_id}
+    GROUP BY Ticker
+    ORDER BY SUM(Quantity) DESC
+    LIMIT 3
+),
+Prices as (
+  select ticker, date, close
+  from SecurityPrices
+  WHERE ticker IN (select  * from TopStocks)
+)
+SELECT
+  name as company,
+sp.date,
+AVG(close) OVER (PARTITION BY sp.ticker ORDER BY sp.date ROWS BETWEEN 30 PRECEDING AND CURRENT ROW) AS moving_average
+FROM Prices as sp
+JOIN StockInfo info ON sp.ticker = info.ticker
+ORDER BY date
+  `,
+  (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json([]);
+    } else {
+      res.json(data);
+    }
+  });
+}
+
+// Route 15: GET /stock_info/:ticker
+const stockInfo = async function(req, res) {
+  connection.query(`
+  SELECT *
+FROM StockInfo
+WHERE ticker = '${req.params.ticker}'
+  `,
+  (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  });
+}
+
 module.exports = {
   signin,
   topstock,
@@ -568,5 +623,7 @@ module.exports = {
   marketShare,
   userWorth,
   newsRecommendation,
-  netWorth
+  netWorth,
+  movingAvg,
+  stockInfo
 }

@@ -67,6 +67,9 @@ export default function StockAnalysis() {
                     break;
             }
 
+            if (responseData == undefined || JSON.stringify(responseData) == '{}') {
+              alert('Bad input');
+          }
             // Use responseData to populate the table
             // Update state or renderResultsTable to display fetched data in the table
             console.log(responseData)
@@ -74,6 +77,7 @@ export default function StockAnalysis() {
         } catch (error) {
             // Handle error
             console.error("Error fetching data:", error);
+            alert('Bad input');
         }
     };
 
@@ -110,13 +114,18 @@ export default function StockAnalysis() {
                 default:
                     break;
             }
-            setData(responseData)
-            console.log(responseData)
+            setData(responseData);
+            console.log(responseData);
+
+            if (responseData == undefined || JSON.stringify(responseData) == '{}') {
+              alert('Bad input');
+          }
 
             // Use responseData to populate the table
             // Update state or renderResultsTable to display fetched data in the table
         } catch (error) {
             // Handle error
+            alert('Bad input');
             console.error("Error fetching data:", error);
         }
     };

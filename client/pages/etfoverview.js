@@ -51,6 +51,9 @@ export default function ETFOverview() {
                     responseData = [];
                     break;
             }
+            if (responseData == undefined || JSON.stringify(responseData) == '{}') {
+                alert('Bad input');
+            }
             console.log("response: " + responseData)
             setData(responseData);
         } catch (error) {

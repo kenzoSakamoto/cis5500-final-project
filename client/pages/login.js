@@ -36,10 +36,12 @@ export default function Login() {
       } else {
         // Handle authentication failure (e.g., show error message)
         console.log('Authentication failed');
+        alert('Invalid login');
       }
     } catch (error) {
       // Handle error (e.g., show error message)
       console.error('Error during login:', error);
+      alert('Invalid login');
     }
   };
 

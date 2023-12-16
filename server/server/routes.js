@@ -19,6 +19,8 @@ connection.connect((err) => err && console.log(err));
 const signin = async function(req, res) {
   const username = req.query.username;
   const password = req.query.password;
+  console.log(username);
+  console.log(password);
 
   connection.query(`
     SELECT id, first_name, last_name, balance
@@ -279,6 +281,7 @@ const price_trend = async function(req, res) {
 
 // Route 8: GET /stock_news/:ticker
 const stock_news = async function(req, res) {
+  console.log(req.params.ticker);
   connection.query(`
     SELECT Headline, Date
     FROM FinancialNews
@@ -297,9 +300,7 @@ const stock_news = async function(req, res) {
 // Route 9: GET /profit_and_loss_statement/:ticker
 const profit_and_loss_statement = async function(req, res) {
   connection.query(`
-SELECT
-year,
-quarter,
+SELECT year, quarter,
 SUM(CASE WHEN indicator = 'Final Revenue' THEN amount ELSE 0 END) AS Revenue,
 SUM(CASE WHEN indicator = 'Gross Profit' THEN amount ELSE 0 END) AS GrossProfit,
 SUM(CASE WHEN indicator = 'Operating Income (Loss)' THEN Amount ELSE 0 END) AS
@@ -320,7 +321,7 @@ GROUP BY year, quarter;
   });
 }
 
-// Route 10: GET /market_share/:ticker
+// Route 10: GET /balance_sheet/:ticker
 const balanceSheet = async function(req, res) {
 
   connection.query(`

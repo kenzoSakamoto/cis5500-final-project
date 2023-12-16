@@ -2,150 +2,175 @@ const { expect } = require('@jest/globals');
 const supertest = require('supertest');
 const app = require('../server');
 const results = require("./results.json")
+jest.setTimeout(1000000)
 
-test('GET /author/name', async () => {
-  await supertest(app).get('/author/name')
+test('GET /signin', async () => {
+  await supertest(app).get('/signin?username=test0@email.com&password=test0')
     .expect(200)
     .then((res) => {
-      expect(res.text).toMatch(/(?!.* John Doe$)^Created by .*$/);
+      console.log(res);
+      expect(res.body).toStrictEqual(results.signin);
     });
 });
 
-test('GET /author/pennkey', async () => {
-  await supertest(app).get('/author/pennkey')
+test('GET /signin Fail', async () => {
+  await supertest(app).get('/signin?username=test0@gmail.com&password=test')
     .expect(200)
     .then((res) => {
-      expect(res.text).toMatch(/(?!.* jdoe$)^Created by .*$/);
+      expect(res.body).toEqual({});
     });
 });
 
-test('GET /random', async () => {
-  await supertest(app).get('/random')
+test('GET /topstock', async () => {
+  await supertest(app).get('/topstock?start_date=2010-07-12&end_date=2016-07-12')
     .expect(200)
     .then((res) => {
-      expect(res.body).toStrictEqual({
-        song_id: expect.any(String),
-        title: expect.any(String),
-      });
+      expect(res.body).toStrictEqual(results.topstock);
     });
 });
 
-test('GET /song/0kN3oXYWWAk1uC0y2WoyOE', async () => {
-  await supertest(app).get('/song/0kN3oXYWWAk1uC0y2WoyOE')
+test('GET /topstock error', async () => {
+  await supertest(app).get('/topstock?start_date=2030-07-12&end_date=2040-07-12')
     .expect(200)
     .then((res) => {
-      expect(res.body).toStrictEqual(results.song)
+      expect(res.body).toStrictEqual({});
     });
 });
 
-test('GET /album/3lS1y25WAhcqJDATJK70Mq', async () => {
-  await supertest(app).get('/album/3lS1y25WAhcqJDATJK70Mq')
+test('GET /tradedstock', async () => {
+  await supertest(app).get('/tradedstock?start_date=2010-07-12&end_date=2016-07-12')
     .expect(200)
     .then((res) => {
-      expect(res.body).toStrictEqual(results.album)
+      expect(res.body).toStrictEqual(results.tradedstock)
     });
 });
 
-test('GET /albums', async () => {
-  await supertest(app).get('/albums')
+test('GET /tradedstock error', async () => {
+  await supertest(app).get('/tradedstock?start_date=2050-07-12&end_date=2060-07-12')
     .expect(200)
     .then((res) => {
-      expect(res.body).toStrictEqual(results.albums)
+      expect(res.body).toStrictEqual({})
     });
 });
 
-test('GET /album_songs/6AORtDjduMM3bupSWzbTSG', async () => {
-  await supertest(app).get('/album_songs/6AORtDjduMM3bupSWzbTSG')
+test('GET /volatilestock', async () => {
+  await supertest(app).get('/volatilestock?start_date=2010-07-12&end_date=2016-07-12')
     .expect(200)
     .then((res) => {
-      expect(res.body).toStrictEqual(results.album_songs)
+      expect(res.body).toStrictEqual(results.volatilestock)
     });
 });
 
-test('GET /top_songs all', async () => {
-  await supertest(app).get('/top_songs')
+test('GET /volatilestock error', async () => {
+  await supertest(app).get('/volatilestock?start_date=2040-07-12&end_date=2050-07-12')
     .expect(200)
     .then((res) => {
-      expect(res.body.length).toEqual(238)
-      expect(res.body[22]).toStrictEqual(results.top_songs_all_22)
+      expect(res.body).toStrictEqual({})
     });
 });
 
-test('GET /top_songs page 3', async () => {
-  await supertest(app).get('/top_songs?page=3')
+test('GET /most_valued_companies', async () => {
+  await supertest(app).get('/most_valued_companies')
     .expect(200)
     .then((res) => {
-      expect(res.body).toStrictEqual(results.top_songs_page_3)
+      expect(res.body[0]).toStrictEqual(results.nopagevalue)
     });
 });
 
-test('GET /top_songs page 5 page_size 3', async () => {
-  await supertest(app).get('/top_songs?page=5&page_size=3')
-    .expect(200)
-    .then((res) => {
-      expect(res.body).toStrictEqual(results.top_songs_page_5_page_size_3)
-    });
-});
-
-test('GET /top_albums all', async () => {
-  await supertest(app).get('/top_albums')
-    .expect(200)
-    .then((res) => {
-      expect(res.body.length).toEqual(12)
-      expect(res.body[7]).toStrictEqual(results.top_albums_all_7)
-    });
-});
-
-test('GET /top_albums page 2', async () => {
-  await supertest(app).get('/top_albums?page=2')
-    .expect(200)
-    .then((res) => {
-      expect(res.body).toStrictEqual(results.top_albums_page_2)
-    });
-});
-
-test('GET /top_albums page 5 page_size 1', async () => {
-  await supertest(app).get('/top_albums?page=5&page_size=1')
-    .expect(200)
-    .then((res) => {
-      expect(res.body).toStrictEqual(results.top_albums_page_5_page_size_1)
-    });
-});
-
-test('GET /search_songs default', async () => {
-  await supertest(app).get('/search_songs')
-    .expect(200)
-    .then((res) => {
-      expect(res.body.length).toEqual(219)
-      expect(res.body[0]).toStrictEqual({
-        song_id: expect.any(String),
-        album_id: expect.any(String),
-        title: expect.any(String),
-        number: expect.any(Number),
-        duration: expect.any(Number),
-        plays: expect.any(Number),
-        danceability: expect.any(Number),
-        energy: expect.any(Number),
-        valence: expect.any(Number),
-        tempo: expect.any(Number),
-        key_mode: expect.any(String),
-        explicit: expect.any(Number),
-      });
-    });
-});
-
-test('GET /search_songs filtered', async () => {
-  await supertest(app).get('/search_songs?title=all&explicit=true&energy_low=0.5&valence_low=0.2&valence_high=0.8')
-    .expect(200)
-    .then((res) => {
-      expect(res.body).toStrictEqual(results.search_songs_filtered)
-    });
-});
-
-test('GET /search_songs null', async () => {
-  await supertest(app).get('/search_songs?title=junk_data')
+test('GET /most_valued_companies error', async () => {
+  await supertest(app).get('/most_valued_companies?page=1000')
     .expect(200)
     .then((res) => {
       expect(res.body).toStrictEqual([])
+    });
+});
+
+test('GET /most_valued_companies page and page size', async () => {
+  await supertest(app).get('/most_valued_companies?page=2&page_size=5')
+    .expect(200)
+    .then((res) => {
+      expect(res.body).toStrictEqual(results.valuecompanies)
+    });
+});
+
+test('GET /price_trend/:ticker', async () => {
+  await supertest(app).get('/price_trend/AAPL?start_date=2010-07-12&end_date=2010-07-20')
+    .expect(200)
+    .then((res) => {
+      expect(res.body).toStrictEqual(results.pricetrend)
+    });
+});
+
+test('GET /stock_news/:ticker', async () => {
+  await supertest(app).get('/stock_news/AAPL')
+    .expect(200)
+    .then((res) => {
+      expect(res.body.length).toEqual(469)
+      expect(res.body[0]).toStrictEqual(results.stocknews)
+    });
+});
+
+test('GET /stock_news/:ticker error', async () => {
+  await supertest(app).get('/stock_news/PPPP')
+    .expect(200)
+    .then((res) => {
+      expect(res.body).toStrictEqual({})
+    });
+});
+
+test('GET /correlation', async () => {
+  await supertest(app).get('/correlation?page_size=1')
+    .expect(200)
+    .then((res) => {
+      expect(res.body.length).toStrictEqual(190)
+    });
+});
+
+test('GET /profit_and_loss_statement/:ticker', async () => {
+  await supertest(app).get('/profit_and_loss_statement/AAPL?year=2014&quarter=Q1')
+    .expect(200)
+    .then((res) => {
+      expect(res.body).toStrictEqual(results.profitandloss)
+    });
+});
+
+test('GET /balance_sheet/:ticker', async () => {
+  await supertest(app).get('/balance_sheet/AAPL?year=2014&quarter=Q1')
+    .expect(200)
+    .then((res) => {
+      expect(res.body).toStrictEqual(results.balancesheet)
+    });
+});
+
+test('GET /market_share/:ticker', async () => {
+  await supertest(app).get('/market_share/AAPL')
+    .expect(200)
+    .then((res) => {
+      expect(res.body).toStrictEqual(results.marketshare)
+    });
+});
+
+test('GET /user_worth/:user_id', async () => {
+  await supertest(app).get('/user_worth/0')
+    .expect(200)
+    .then((res) => {
+      expect(res.body).toStrictEqual(results.userworth)
+    });
+});
+
+test('GET /net_worth/:user_id', async () => {
+  await supertest(app).get('/net_worth/test0@email.com')
+    .expect(200)
+    .then((res) => {
+      expect(res.body.length).toStrictEqual(9040)
+      expect(res.body[1]).toStrictEqual(results.networth)
+    });
+});
+
+test('GET /news_recommendation', async () => {
+  await supertest(app).get('/news_recommendation/test0@email.com?')
+    .expect(200)
+    .then((res) => {
+      expect(res.body).toStrictEqual(results.newsrecs);
     });
 });
